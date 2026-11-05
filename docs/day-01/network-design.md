@@ -91,7 +91,16 @@ App Gateway v2 requires its own subnet. Do not place a jump box, private endpoin
 | `snet-private-endpoints` | `10.2.11.0/24` | None | `nsg-private-endpoints` | None | APIM, App Service, Functions private endpoints |
 | `snet-aks-ingress` | `10.2.12.0/27` | None | `nsg-aks` | `rt-workload` | Internal ingress load balancer |
 
-> **Delegation note:** APIM Standard v2 outbound VNet integration requires a delegated subnet and a Network Security Group that allows outbound 443 to Azure Key Vault. App Service and Functions use `Microsoft.Web/serverFarms` delegation. Confirm the current requirement for your Functions hosting plan at provisioning time.
+> **Tier-specific delegation — do not apply a classic-injection rule to Standard v2:**
+>
+> | APIM networking mode | Tiers | Subnet delegation |
+> |---|---|---|
+> | Classic VNet injection | Developer, Premium | **None** |
+> | VNet injection | Premium v2 | `Microsoft.ApiManagement/service` |
+> | Outbound VNet integration | Standard v2 | `Microsoft.Web/serverFarms` |
+> | Inbound private endpoint | Developer/Basic/Standard/Standard v2/Premium/Premium v2 | Private endpoint subnet, no delegation |
+>
+> This design uses **Standard v2 outbound VNet integration**, so `snet-apim-outbound` is correctly delegated to `Microsoft.Web/serverFarms`. The subnet is still dedicated to a single APIM instance. The delegation does **not** mean App Service can share the subnet; it is how the Standard v2 outbound integration is implemented. If you switch to classic Developer/Premium injection, remove the delegation and set it to **None**. If you switch to Premium v2 injection, use `Microsoft.ApiManagement/service`. App Service and Functions use separate integration subnets.
 
 ### 4.4 Data VNet
 
@@ -270,13 +279,15 @@ AKS requires outbound access to Microsoft Container Registry, Azure Resource Man
 APIM Standard v2 uses two different networking features:
 
 1. **Inbound private endpoint** in `snet-private-endpoints` (workload VNet) for the gateway endpoint.
-2. **Outbound VNet integration** in `snet-apim-outbound` (workload VNet), delegated to `Microsoft.Web/serverFarms`.
+2. **Outbound VNet integration** in `snet-apim-outbound` (workload VNet), delegated to `Microsoft.Web/serverFarms` **for Standard v2**.
 
 Implications:
 
 - The APIM gateway is reachable only through the private endpoint after public network access is disabled.
 - APIM can reach AKS and App Service private endpoints over the workload VNet.
 - APIM cannot use classic VNet injection in this tier. Do not design a `/24` "APIM injection subnet" and expect it to work.
+- The `Microsoft.Web/serverFarms` delegation is required for Standard v2 outbound integration per [Microsoft's documentation](https://learn.microsoft.com/en-us/azure/api-management/integrate-vnet-outbound). It does not mean App Service shares the subnet; the subnet remains dedicated to one APIM instance.
+- Classic Developer/Premium injection requires a subnet with **no delegation** (`None`). Premium v2 injection uses `Microsoft.ApiManagement/service`. If you change APIM tier/mode, change the delegation with it.
 - The `snet-apim-outbound` NSG must allow outbound 443 to Key Vault (APIM dependency) and to the backends.
 - APIM custom domain names in v2 tiers require a publicly resolvable DNS name. The recommended pattern here is:
   - Clients use `api.logistics.example.com` at App Gateway.

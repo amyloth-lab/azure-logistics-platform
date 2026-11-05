@@ -149,6 +149,7 @@ A cost-controlled lab profile is documented in [docs/day-01/plan-of-action.md](d
 8. **Least privilege for pipelines.** The build identity can push images; it cannot deploy. The release identity can deploy; it cannot push images.
 9. **Observable by default.** Every service emits logs, metrics, and traces with a correlation ID.
 10. **Assume breach.** Segment, log, alert, back up, rehearse recovery, and keep a rollback path.
+11. **No account identifiers in Git.** Subscription IDs and tenant IDs are not passwords, but they are sensitive metadata. Keep them in local notes or pipeline variable groups, never in tracked documentation.
 
 ---
 

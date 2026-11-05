@@ -294,7 +294,13 @@ Open:
 - `docs/day-01/network-design.md`
 - `docs/day-01/identity-and-rbac.md`
 
-Then open `docs/day-01/review-notes.md` and answer the ten questions in **short** sentences. You do not need perfect prose. The goal is to prove you can explain the design.
+Then open `docs/day-01/review-notes.local.md` and answer the ten questions in **short** sentences. This is your **private, gitignored** copy. Put your real subscription ID and tenant details there, **not** in the tracked `review-notes.md` template.
+
+If the local file does not exist, create it first:
+
+```powershell
+Copy-Item docs\day-01\review-notes.md docs\day-01\review-notes.local.md
+```
 
 At minimum, be able to answer these five:
 
@@ -304,7 +310,7 @@ At minimum, be able to answer these five:
 4. How does a user get a token, and how does the API know what they may do?
 5. Where is Terraform state stored, and who can read it?
 
-**Checkpoint:** `review-notes.md` has answers, assumptions, and at least three risks.
+**Checkpoint:** `review-notes.local.md` has answers, assumptions, and at least three risks. `git check-ignore docs/day-01/review-notes.local.md` confirms it is ignored.
 
 ---
 
@@ -333,10 +339,28 @@ OK: diagrams
 Validation passed.
 ```
 
+Before committing, confirm the private notes are ignored and no account identifiers are in tracked files:
+
+```powershell
+git check-ignore -v docs\day-01\review-notes.local.md
+git grep -nE "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@[A-Za-z0-9.-]+\.onmicrosoft\.com|AccountKey=|SharedAccessKey=" -- .
+git status --short
+```
+
+`git check-ignore` should print the matching `.gitignore` rule. `git grep` should print nothing. `git status` should **not** show `review-notes.local.md`.
+
+If Gitleaks is installed, also run:
+
+```powershell
+gitleaks detect --source . --verbose --redact --no-git
+```
+
 Then:
 
 ```powershell
 git add .
+git status --short
+git grep --cached -nE "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@[A-Za-z0-9.-]+\.onmicrosoft\.com|AccountKey=|SharedAccessKey=" -- .
 git commit -m "docs(day-1): complete architecture, network, RBAC, and plan"
 git tag -a day-1 -m "Day 1 checkpoint: architecture and delivery plan"
 git push origin main --tags

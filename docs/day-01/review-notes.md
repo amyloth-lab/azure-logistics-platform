@@ -1,5 +1,9 @@
 # Day 1 Architecture Review Notes
 
+> **This file is the committed template. Do not put real subscription IDs, tenant IDs, or other account identifiers in it.**
+>
+> Copy it to `review-notes.local.md` and fill that file in. The local file is gitignored. If you already filled this tracked file, copy your answers to the local file and restore this file to the blank template before committing.
+
 Fill this in before you reply `EOD`. Keep it short. The goal is to prove you can explain the design, not to write an essay.
 
 ## 1. Scope and assumptions
@@ -7,10 +11,12 @@ Fill this in before you reply `EOD`. Keep it short. The goal is to prove you can
 - Azure subscription:
 - Entra tenant / license tier:
 - Region:
-- Domain:
+- Domain (public API hostname, not the Entra tenant domain):
 - Lab or production-shaped budget:
-- On-prem CIDR confirmed by:
+- On-prem CIDR confirmed by (person/team + date, or `N/A - no hybrid connection`):
 - Open questions:
+
+> `Domain` is the hostname clients call, for example `api.logistics.example.com`. `example.com` is only a design placeholder; use a domain you control before configuring a real TLS certificate. If you have no on-premises connection in this lab, write `N/A - no hybrid connection; 192.168.0.0/16 is a placeholder assumption`.
 
 ## 2. Architecture review answers
 

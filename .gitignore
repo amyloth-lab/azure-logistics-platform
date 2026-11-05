@@ -71,6 +71,7 @@ desktop.ini
 # Local evidence and scratch
 docs/day-01/evidence/*
 !docs/day-01/evidence/.gitkeep
+docs/day-01/review-notes.local.md
 scratch/
 tmp/
 .tmp-*/

@@ -21,6 +21,16 @@ Use **APIM Standard v2** with:
 
 Do not use classic VNet injection assumptions. Standard v2 does not inject the whole service into the VNet; it uses two separate networking features.
 
+Delegation is tier-specific and is a common review trap:
+
+| Mode | Tier | Subnet delegation |
+|---|---|---|
+| Classic VNet injection | Developer, Premium | **None** |
+| VNet injection | Premium v2 | `Microsoft.ApiManagement/service` |
+| Outbound VNet integration | Standard v2 | `Microsoft.Web/serverFarms` |
+
+The `Microsoft.Web/serverFarms` delegation is **required** for Standard v2 outbound integration. It does not mean App Service shares the subnet; the subnet remains dedicated to the APIM instance. Removing it would break the Standard v2 integration. If you switch to classic injection, remove the delegation; if you switch to Premium v2 injection, change it to `Microsoft.ApiManagement/service`.
+
 ## Consequences
 
 ### Positive

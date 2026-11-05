@@ -846,7 +846,13 @@ Rules for using Copilot:
 
 ### 9.1 Architecture review questions
 
-Answer these in the PR description or in [review-notes.md](review-notes.md):
+Answer these in `review-notes.local.md`, which is gitignored. Do **not** put real subscription IDs, tenant IDs, or account details in the tracked [review-notes.md](review-notes.md) template.
+
+If the local copy does not exist:
+
+```powershell
+Copy-Item docs\day-01\review-notes.md docs\day-01\review-notes.local.md
+```
 
 1. What is the only public application entry point?
 2. Which subnet does APIM use for inbound, and which for outbound?
@@ -875,7 +881,14 @@ Create a folder `docs/day-01/evidence/` (do not commit screenshots containing te
 
 ```powershell
 python scripts/validate_repo.py
+
+# The private notes must be ignored and absent from tracked files.
+git check-ignore -v docs\day-01\review-notes.local.md
+git grep -nE "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@[A-Za-z0-9.-]+\.onmicrosoft\.com|AccountKey=|SharedAccessKey=" -- .
+git status --short
+
 git add .
+git grep --cached -nE "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|@[A-Za-z0-9.-]+\.onmicrosoft\.com|AccountKey=|SharedAccessKey=" -- .
 git commit -m "docs(day-1): complete architecture, network, RBAC, and plan"
 git tag -a day-1 -m "Day 1 checkpoint: architecture and delivery plan"
 git push origin main --tags
