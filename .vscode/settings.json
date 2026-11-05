@@ -1,0 +1,33 @@
+{
+  "editor.formatOnSave": true,
+  "editor.rulers": [100, 120],
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.associations": {
+    "*.yaml": "yaml",
+    "*.yml": "yaml"
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.analysis.typeCheckingMode": "basic",
+  "terraform.languageServer.enable": true,
+  "terraform.validation.enabled": true,
+  "ansible.validation.enabled": true,
+  "ansible.validation.lint.enabled": true,
+  "yaml.schemas": {
+    "https://json.schemastore.org/azure-pipelines.json": "pipelines/*.yml",
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+  },
+  "markdownlint.config": {
+    "MD013": false,
+    "MD033": false
+  },
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  }
+}

@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+**/backend.hcl
+!**/backend.hcl.example
+*.tfvars
+!*.tfvars.example
+.terraformrc
+terraform.rc
+
+# Ansible
+*.retry
+*.log
+ansible/inventory/*.local
+ansible/.cache/
+
+# Azure / Kubernetes
+.azure/
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+.helm/
+*.tgz
+
+# Secrets and certificates
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+!docs/**/*.example
+.envrc
+secrets.*
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Local evidence and scratch
+docs/day-01/evidence/*
+!docs/day-01/evidence/.gitkeep
+scratch/
+tmp/
+.tmp-*/
+*.tmp

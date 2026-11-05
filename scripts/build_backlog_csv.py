@@ -1,0 +1,136 @@
+"""Generate docs/day-01/azure-boards-import.csv.
+
+Edit the rows below, then run:
+    python scripts/build_backlog_csv.py
+
+The output is intentionally simple: one row per work item, no embedded
+newlines, and every field quoted. Import it into Azure Boards, then fix
+parent links manually if your import does not preserve them.
+"""
+
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "docs" / "day-01" / "azure-boards-import.csv"
+
+AREA = r"azure-logistics-platform\Logistics"
+ITERATION = r"azure-logistics-platform\Sprint 1"
+
+FIELDS = [
+    "Work Item Type",
+    "Title",
+    "Description",
+    "Acceptance Criteria",
+    "Priority",
+    "Story Points",
+    "Tags",
+    "Area Path",
+    "Iteration Path",
+]
+
+ROWS: list[dict[str, str]] = []
+
+
+def add(
+    work_item_type: str,
+    title: str,
+    description: str,
+    acceptance: str,
+    priority: str = "2",
+    points: str = "",
+    tags: str = "",
+) -> None:
+    ROWS.append(
+        {
+            "Work Item Type": work_item_type,
+            "Title": title,
+            "Description": description,
+            "Acceptance Criteria": acceptance,
+            "Priority": priority,
+            "Story Points": points,
+            "Tags": tags,
+            "Area Path": AREA,
+            "Iteration Path": ITERATION,
+        }
+    )
+
+
+# Epics
+add("Epic", "Platform foundation and secure network", "Build the hub-and-spoke network, private DNS, firewall, Bastion, and shared security services.", "Hub and spokes deployed; private DNS resolves; firewall egress logged; no public data plane.", "1", "", "network;security;foundation")
+add("Epic", "Identity and least-privilege access", "Implement Entra app roles, scopes, groups, managed identities, and pipeline identities.", "Reader/contributor/manager flows tested; no standing Owner; build and release identities separated.", "1", "", "identity;rbac;security")
+add("Epic", "Data and event-driven processing", "Provide Azure SQL, Managed Redis, Blob, Service Bus, and Functions for the logistics domain.", "Transactional order + outbox works; event reaches Function; DLQ monitored.", "1", "", "data;eventing")
+add("Epic", "Logistics API", "Implement inventory and order APIs with authentication, authorization, ownership, and audit.", "Both route groups work end to end; negative tests pass.", "1", "", "app;api")
+add("Epic", "Infrastructure as code and configuration management", "Provision with Terraform and configure with Ansible using secure remote state.", "Terraform plan/apply repeatable; Ansible idempotent; state locked and private.", "1", "", "terraform;ansible")
+add("Epic", "CI/CD and software supply chain", "Build and release the platform with separate pipelines, identities, and approvals.", "Build green; release gated; image scanned and digest recorded.", "1", "", "cicd;devsecops")
+add("Epic", "Observability and security operations", "Centralize logs, metrics, traces, alerts, Defender, and incident runbooks.", "Dashboards and alerts exist; a failed request can be traced end to end.", "1", "", "observability;security")
+add("Epic", "Documentation and handover", "Make the platform repeatable by another engineer.", "README, ADRs, runbook, demo script, and cleanup steps are complete.", "1", "", "docs;handover")
+
+# Features
+add("Feature", "Hub-and-spoke network", "Hub with firewall/Bastion/DNS, ingress/workload/data/management spokes, peering and UDRs.", "Traffic paths validated; no unintended spoke-to-spoke access.", "1", "", "network;hub-spoke")
+add("Feature", "Private DNS and private endpoints", "Private endpoint zones for APIM, App Service, SQL, Redis, Blob, Key Vault, Service Bus, ACR, AKS.", "All data services resolve to private IPs from workload and management VNets.", "1", "", "network;private-link")
+add("Feature", "Entra app roles and scopes", "Create logistics-api registration, roles, scopes, groups, and client apps.", "Tokens contain expected roles/scopes; negative tests pass.", "1", "", "identity;entra")
+add("Feature", "Managed identities and pipeline identities", "Create workload identities and scoped build/release identities with federation.", "No secrets in pipeline; build cannot deploy; release cannot push.", "1", "", "identity;workload-identity")
+add("Feature", "Transactional data model", "Design inventory, orders, order lines, outbox, and idempotency tables.", "Schema supports concurrency, ownership, and outbox in one transaction.", "1", "", "data;sql")
+add("Feature", "Eventing and Functions", "Define Service Bus topics/subscriptions and Functions consumers.", "Order event reaches Function; poison message goes to DLQ.", "1", "", "eventing;functions")
+add("Feature", "Inventory API", "Read and write inventory with manager-only delete.", "Reader/contributor/manager tests pass; deletes audited.", "1", "", "app;inventory")
+add("Feature", "Orders API", "Create, read, update, cancel, and manager-delete orders with ownership.", "Users see only their orders; manager can delete with audit.", "1", "", "app;orders")
+add("Feature", "Terraform modules and remote state", "Create reusable network, data, AKS, APIM, and identity modules with Blob backend.", "Plan/apply repeatable; state private and locked.", "1", "", "terraform;state")
+add("Feature", "Ansible baseline", "Harden agent/Ansible VMs and apply Kubernetes namespaces, quotas, and network policies.", "Second run reports no changes; baseline enforced.", "1", "", "ansible;configuration")
+add("Feature", "Build pipeline", "Build, test, scan, sign/digest, and publish artifacts without deploy rights.", "Green build; SBOM; image in ACR; build identity cannot deploy.", "1", "", "cicd;build")
+add("Feature", "Release pipeline", "Plan/apply infrastructure, configure, migrate, deploy, verify, and roll back.", "Dev deployed; prod approval gate; rollback documented.", "1", "", "cicd;release")
+add("Feature", "Monitoring and alerts", "Dashboards, SLO alerts, diagnostic settings, Defender, and runbooks.", "Key alerts fire in a test; trace shows API to SQL path.", "1", "", "observability;ops")
+add("Feature", "Runbook and handover", "Document deploy, rollback, restore, rotate, replay, and cleanup.", "Another engineer can follow the runbook without tribal knowledge.", "1", "", "docs;runbook")
+
+# Day 1 stories
+add("User Story", "Design hub-and-spoke CIDR plan", "Define VNets, subnets, AKS service/pod CIDRs, on-prem ranges, and App Service worker range avoidance.", "CIDR table has no overlaps; each subnet has purpose/size/owner; design reviewed.", "1", "3", "day-1;network")
+add("User Story", "Define RBAC matrix and manager delete", "Map endpoints to roles, ownership rules, and manager-only deletes.", "Matrix covers all endpoints and includes negative tests for reader/contributor/manager.", "1", "3", "day-1;rbac")
+add("User Story", "Threat model and zero-trust controls", "Run STRIDE and map preventive/detective controls.", "At least 10 threats with controls; attack paths reviewed.", "1", "3", "day-1;security")
+add("User Story", "Scaffold repo, branch protection, and secret scan", "Create GitHub repo, protections, VS Code settings, and pre-commit.", "Repo pushed; main protected; gitleaks clean; prerequisites script run.", "1", "2", "day-1;github")
+add("User Story", "Create Azure Boards sprint and backlog", "Create Agile project, area, Sprint 1, and import backlog.", "Board has epics/features/stories/tasks and WIP limits.", "1", "2", "day-1;boards")
+
+# Day 2 stories
+add("User Story", "Bootstrap Terraform state", "Create private state storage with versioning, soft delete, Entra auth, and lease locking.", "Remote backend works; no public access; release identity can read/write.", "1", "3", "day-2;terraform")
+add("User Story", "Build hub network and firewall", "Deploy hub VNet, firewall, Bastion, gateway, DNS resolver, route tables, NSGs.", "Hub applied; egress logged; Bastion access works; no public SSH.", "1", "5", "day-2;network")
+add("User Story", "Apply policy and shared security", "Assign Azure Policy, Log Analytics, Key Vault, budget, and diagnostic settings.", "Policy compliance visible; budget alert active; logs flowing.", "1", "3", "day-2;governance")
+
+# Day 3 stories
+add("User Story", "Deploy AKS private cluster", "Create private AKS with CNI Overlay, network policy, workload identity, internal ingress.", "Nodes Ready; no public IP; ACR pull works; APIM can reach ingress.", "1", "8", "day-3;aks")
+add("User Story", "Deploy APIM and App Gateway", "Create APIM Standard v2 with private endpoint/outbound integration and App Gateway WAF_v2.", "APIM private; App Gateway reaches it; 401 without token; WAF blocks test payload.", "1", "8", "day-3;apim;waf")
+add("User Story", "Deploy data services and private endpoints", "SQL, Managed Redis, Blob, Key Vault, Service Bus with private endpoints and DNS.", "Private DNS resolves; public access disabled; identities assigned.", "1", "8", "day-3;data")
+add("User Story", "Configure Ansible baseline", "Harden VMs and apply Kubernetes namespaces, quotas, network policies, and RBAC.", "Second run reports no changes; baseline verified.", "1", "5", "day-3;ansible")
+
+# Day 4 stories
+add("User Story", "Implement inventory endpoints", "GET/POST/PATCH/DELETE inventory with roles, validation, and audit.", "Reader/contributor/manager tests pass; delete audited.", "1", "5", "day-4;api")
+add("User Story", "Implement order endpoints and ownership", "Create/read/update/cancel/delete orders with own-order rule.", "User A cannot read user B; manager can delete; tests pass.", "1", "8", "day-4;api")
+add("User Story", "Implement outbox relay and Functions", "Write outbox in transaction; relay publishes; Function consumes and audits.", "Event flows; retry works; DLQ tested.", "1", "5", "day-4;eventing")
+add("User Story", "Build container and publish artifacts", "Build, scan, SBOM, digest, push to ACR, publish Helm/artifacts.", "Image digest recorded; scans pass; build identity cannot deploy.", "1", "5", "day-4;build")
+
+# Day 5 stories
+add("User Story", "Create release pipeline with approvals", "Terraform plan/apply, Ansible, migrations, deploy, smoke, DAST, prod gate.", "Dev deployed; prod blocked on approval; rollback works.", "1", "8", "day-5;release")
+add("User Story", "Add observability, alerts, and runbook", "Dashboards, alerts, runbook, restore test, cost review, cleanup.", "Alerts tested; trace visible; runbook and cleanup recorded.", "1", "5", "day-5;ops")
+
+# Tasks
+add("Task", "Validate no CIDR overlaps", "Check VNets, on-prem, AKS service/pod CIDRs, and App Service worker ranges.", "No overlap; documented in network design.", "1", "", "day-1;validation")
+add("Task", "Run gitleaks and pre-commit", "Scan the repo before the first push.", "No secrets; hooks installed; failures fixed.", "1", "", "day-1;security")
+add("Task", "Test private DNS resolution", "Run nslookup/dig from workload and management VNets.", "All private endpoints resolve to private IPs.", "1", "", "day-3;validation")
+add("Task", "Test negative auth cases", "No token, wrong audience, expired, missing role, other user's order.", "Expected 401/403/404; tests in CI.", "1", "", "day-4;security")
+add("Task", "Test WAF and APIM policies", "Blocked payload, rate limit, no token, valid token without role.", "Expected 403/429/401; logs show rule IDs.", "1", "", "day-5;security")
+add("Task", "Perform rollback dry run", "Helm rollback and App Service slot swap back.", "Previous version restored; smoke tests pass.", "1", "", "day-5;ops")
+add("Task", "Run cost review and cleanup", "Review top costs, delete non-prod, verify no orphans.", "Budget within plan; no orphan public IPs/disks.", "1", "", "day-5;cost")
+add("Task", "Record demo and handover", "Capture auth, RBAC, event, logs, pipeline, rollback.", "Demo script and evidence stored; README updated.", "1", "", "day-5;docs")
+
+
+def main() -> None:
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    with OUT.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=FIELDS, quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+        writer.writerows(ROWS)
+    print(f"Wrote {len(ROWS)} work items to {OUT}")
+
+
+if __name__ == "__main__":
+    main()

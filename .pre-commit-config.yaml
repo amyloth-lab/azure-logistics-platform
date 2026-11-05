@@ -1,0 +1,47 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks staged secret scan
+        entry: gitleaks protect --verbose --redact --staged
+        language: system
+        pass_filenames: false
+
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: terraform fmt -check -recursive
+        language: system
+        files: \.tf$
+        pass_filenames: false
+
+      - id: tflint
+        name: tflint
+        entry: tflint --recursive
+        language: system
+        files: \.tf$
+        pass_filenames: false
+
+      - id: yamllint
+        name: yamllint
+        entry: yamllint -c .yamllint .
+        language: system
+        types: [yaml]
+        pass_filenames: false

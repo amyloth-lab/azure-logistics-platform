@@ -1,0 +1,23 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "github.copilot",
+    "github.copilot-chat",
+    "hashicorp.terraform",
+    "redhat.ansible",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode.azurecli",
+    "ms-vscode.azure-account",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "davidanson.vscode-markdownlint",
+    "humao.rest-client",
+    "editorconfig.editorconfig",
+    "sonarsource.sonarlint-vscode",
+    "bierner.markdown-mermaid",
+    "ms-vscode-remote.remote-wsl"
+  ]
+}
