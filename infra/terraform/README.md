@@ -1,29 +1,44 @@
-# Terraform - Planned Layout
+# Terraform - Layout and Day 2 Status
 
-This directory is intentionally empty on Day 1. Terraform work starts on Day 2 with the state bootstrap and the hub.
+Day 2 implements the state bootstrap and the secure hub. Spokes, AKS, APIM, data services, and the application arrive on Day 3+.
+
+Implemented now:
+
+- `bootstrap/` - state resource group, storage account, container, Entra auth, versioning, soft delete, temporary deployer IP allow-list.
+- `modules/network-hub/` - hub VNet, seven subnets, Bastion/shared NSGs.
+- `modules/firewall/` - Azure Firewall, policy, public IP, diagnostics.
+- `modules/bastion/` - Azure Bastion and public IP.
+- `modules/observability/` - Log Analytics workspace.
+- `modules/private-dns/` - nine private DNS zones linked to the hub.
+- `modules/policy/` - subscription-scope deny of public IPs outside approved resource groups.
+- `envs/dev/` - wires the modules together and creates the budget.
+
+Still planned for Day 3+:
 
 ```text
 infra/terraform/
-├── bootstrap/                 # state storage, initial RG (local state, then migrate)
+├── bootstrap/                 # implemented: state storage, role assignment, container
 ├── modules/
-│   ├── network-hub/           # hub VNet, firewall, Bastion, gateway, DNS resolver
-│   ├── network-spoke/         # spoke VNet, subnets, peering, route tables, NSGs
-│   ├── private-dns/           # zones, links, records
-│   ├── aks/                   # private cluster, node pools, add-ons, identities
-│   ├── app-service/           # plan, app, slots, VNet integration, private endpoint
-│   ├── functions/             # Flex Consumption, VNet integration, app settings
-│   ├── apim/                  # Standard v2, private endpoint, outbound integration
-│   ├── data/                  # SQL, Redis, Storage, Key Vault, Service Bus
-│   ├── acr/                   # registry, private endpoint, retention
-│   ├── observability/         # Log Analytics, App Insights, diagnostics, alerts
-│   └── security/              # policy, Defender, role assignments
+│   ├── network-hub/           # implemented: hub VNet, seven subnets, Bastion/shared NSGs
+│   ├── firewall/              # implemented: firewall, policy, public IP, diagnostics
+│   ├── bastion/               # implemented: Bastion and public IP
+│   ├── observability/         # implemented: Log Analytics
+│   ├── private-dns/           # implemented: nine zones + hub links
+│   ├── policy/                # implemented: deny public IP outside approved RGs
+│   ├── network-spoke/         # planned: spokes, peering, route tables
+│   ├── aks/                   # planned: private cluster, node pools, add-ons, identities
+│   ├── app-service/           # planned: plan, app, slots, VNet integration, private endpoint
+│   ├── functions/             # planned: Flex Consumption, VNet integration, settings
+│   ├── apim/                  # planned: Standard v2, private endpoint, outbound integration
+│   ├── data/                  # planned: SQL, Redis, Storage, Key Vault, Service Bus
+│   └── acr/                   # planned: registry, private endpoint, retention
 ├── envs/
 │   ├── dev/
 │   │   ├── backend.hcl.example
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── terraform.tfvars.example
-│   └── prod/
+│   └── prod/                  # planned
 └── README.md
 ```
 

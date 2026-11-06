@@ -1,0 +1,4 @@
+prefix      = "logistics"
+environment = "dev"
+location    = "australiaeast"
+deployer_ip = "203.0.113.10/32"

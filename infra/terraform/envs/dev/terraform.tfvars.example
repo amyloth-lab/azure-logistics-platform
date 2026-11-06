@@ -1,0 +1,7 @@
+prefix                      = "logistics"
+environment                 = "dev"
+location                    = "australiaeast"
+firewall_sku_tier           = "Basic" # or "Standard" if Basic is unavailable
+firewall_threat_intelligence_mode = "Alert"
+budget_amount_usd           = 200
+budget_contact_emails       = ["you@example.com"]

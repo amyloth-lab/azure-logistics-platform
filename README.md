@@ -6,9 +6,9 @@ The business capability is deliberately small: **inventory** and **orders** APIs
 
 The engineering capability is deliberately realistic: hub-and-spoke networking, private endpoints, WAF, API Management, AKS, App Service, Azure Functions, Service Bus, Azure SQL, Azure Managed Redis, Blob Storage, Key Vault, Terraform, Ansible, policy, observability, and a software supply-chain gate.
 
-> **Current checkpoint: Day 1 of 5.**
-> Work through [docs/day-01/README.md](docs/day-01/README.md), complete the end-of-day checklist, then reply **`EOD`** to unlock Day 2.
-> Do not deploy Azure resources on Day 1.
+> **Current checkpoint: Day 2 of 5.**
+> Start with [docs/day-02/README.md](docs/day-02/README.md). It bootstraps Terraform state and deploys the secure hub.
+> Do not start AKS, APIM, SQL, Redis, or the application until Day 3.
 
 ---
 
@@ -33,6 +33,8 @@ The same codebase is packaged as a container and deployed to **AKS**. A smaller 
 - No secrets are stored in code or pipelines. Workloads use managed identities and workload identity federation.
 - The data plane has no public network access. App Gateway is the only public application entry point.
 
+> **Entra ID Free constraint:** this tenant does not have P1/P2. Conditional Access, PIM, access reviews, and risk policies are unavailable. The project uses security defaults, separate admin accounts, manual JIT, and quarterly manual reviews. See [ADR-0011](docs/adr/0011-entra-id-free-license.md).
+
 ### The platform
 
 | Layer | Service | Why |
@@ -49,7 +51,7 @@ The same codebase is packaged as a container and deployed to **AKS**. A smaller 
 | Secrets/keys | Azure Key Vault | TLS certificates, CMK, last-resort secrets |
 | Registry | Azure Container Registry Premium | Private image pulls, scanning, retention |
 | Network | Hub-and-spoke VNets, Azure Firewall, Bastion, Private DNS | Segmentation, controlled egress, private resolution |
-| Identity | Microsoft Entra ID, managed identities, PIM | Phishing-resistant auth, least privilege, no standing admin |
+| Identity | Microsoft Entra ID Free, managed identities, security defaults, manual JIT | OIDC/app roles, MFA, least privilege; no PIM/Conditional Access on Free |
 | IaC | Terraform + remote state in Blob | Repeatable, reviewable infrastructure |
 | Configuration | Ansible | Linux/agent hardening and Kubernetes baseline |
 | Delivery | GitHub + Azure DevOps | Source, Boards, separate build/release pipelines |
@@ -102,6 +104,8 @@ python diagrams/render_diagrams.py
 │   │   ├── plan-of-action.md
 │   │   ├── glossary.md
 │   │   └── azure-boards-import.csv
+│   ├── day-02/
+│   │   └── README.md            # Terraform state + secure hub
 │   └── adr/                     # Architecture Decision Records
 ├── infra/
 │   ├── ansible/                 # configuration management (Day 3+)
@@ -120,12 +124,12 @@ python diagrams/render_diagrams.py
 | Day | Outcome | Evidence you can show |
 |---|---|---|
 | **1** | Architecture, network, identity/RBAC, zero-trust threat model, delivery plan, repo and board | Diagrams, CIDR plan, RBAC matrix, ADRs, GitHub repo, Azure Boards backlog |
-| **2** | Bootstrap Terraform state and build the secure hub: Firewall, Bastion, DNS, Log Analytics, Key Vault, policy, identities | Remote state in Blob, hub `terraform plan/apply`, policy assignments |
+| **2** | Bootstrap Terraform state and build the secure hub: Firewall, Bastion, DNS, Log Analytics, policy, budget | Remote state in Blob, hub `terraform plan/apply`, policy assignment |
 | **3** | Build spokes and platform services: AKS, App Service, APIM, SQL, Redis, Storage, Service Bus, Functions, ACR, Ansible baseline | Private endpoints, DNS resolution tests, AKS/APIM/App Service deployed, Ansible idempotence |
 | **4** | Build the FastAPI app, Entra auth, RBAC, tests, and the **build** pipeline | Green build, unit/integration tests, SAST/dependency/image scans, SBOM, signed image in ACR |
 | **5** | Build the **release** pipeline, deploy to dev, gate prod, verify, document, and clean up | Dev deployment, approval-gated prod stage, smoke/DAST results, runbook, cost/cleanup record |
 
-Day 1 is deliberately design-heavy. You cannot safely automate a network and identity model you have not decided yet.
+Day 1 is deliberately design-heavy. Day 2 is deliberately foundation-heavy. You cannot safely automate a network and identity model you have not decided yet.
 
 ---
 
@@ -155,11 +159,11 @@ A cost-controlled lab profile is documented in [docs/day-01/plan-of-action.md](d
 
 ## Start here
 
-1. **If you feel lost, open [DO-THIS-FIRST.md](docs/day-01/DO-THIS-FIRST.md).** It is the minimum, numbered path for Day 1.
-2. For the full explanation, open [docs/day-01/README.md](docs/day-01/README.md). Keep [the glossary](docs/day-01/glossary.md) nearby.
-3. Block 4.5 hours. Do the steps in order.
-4. Capture the evidence listed in the end-of-day checklist.
-5. Commit and push your work.
-6. Reply **`EOD`** in the chat. Day 2 will be released only after that.
+1. **Day 2:** open [docs/day-02/README.md](docs/day-02/README.md). Follow the steps in order.
+2. **Day 1 reference:** [docs/day-01/README.md](docs/day-01/README.md) and the [glossary](docs/day-01/glossary.md).
+3. Block 4-5 hours for Day 2. Do not jump ahead to AKS or APIM.
+4. Capture the evidence listed in the Day 2 end-of-day checklist.
+5. Commit, tag `day-2`, and push your work.
+6. Reply **`EOD`** in the chat. Day 3 will be released only after that.
 
 If you get stuck, use the Copilot prompts in the guide. Do not skip the network and RBAC decisions to "save time"; those decisions are the project.
