@@ -26,11 +26,11 @@ For this project, the most important consequence is:
 
 | Pillar | Control | Implementation | Evidence |
 |---|---|---|---|
-| Identity | Phishing-resistant MFA | Entra ID + Conditional Access + FIDO2/Windows Hello | Sign-in logs, CA policy export |
+| Identity | MFA | Entra ID Free security defaults (Authenticator app); not a hardware-key guarantee | Sign-in logs, security-defaults state |
 | Identity | Least-privilege app roles | `Inventory.Reader`, `Order.Contributor`, `Logistics.Manager` | App registration export, RBAC matrix |
-| Identity | Just-in-time admin | PIM for Azure/Entra roles | PIM activation history |
+| Identity | Just-in-time admin | Manual JIT request, separate admin account, remove after task | Ticket/approval record, role-assignment export |
 | Identity | Workload identity | AKS workload identity, App Service/Functions managed identity | Federated credential list, role assignments |
-| Device | Compliant device for admin | Conditional Access grant | CA policy, device compliance report |
+| Device | Compliant device for admin | **Not available on Free.** Compensate with a dedicated admin workstation, no standing roles, and MFA | Manual evidence; documented gap |
 | Network | Segmentation | Hub-and-spoke, NSGs, network policy | VNet/subnet/NSG export |
 | Network | Private data plane | Private endpoints, public access disabled | `az resource list`, PE list, DNS tests |
 | Network | Controlled egress | Azure Firewall FQDN/network rules | Firewall logs, policy export |
@@ -58,7 +58,7 @@ For this project, the most important consequence is:
 
 | ID | Threat | Impact | Preventive controls | Detective controls |
 |---|---|---|---|---|
-| S1 | Stolen user access token replayed | Impersonate a user | Short token lifetime, Conditional Access, token protection, mTLS for backends, anomaly detection | Entra sign-in logs, impossible travel, 401/403 spikes |
+| S1 | Stolen user access token replayed | Impersonate a user | Short token lifetime, security-defaults MFA, mTLS for backends, anomaly detection; **no device-compliance gate on Free** | Entra sign-in logs, impossible travel, 401/403 spikes |
 | S2 | Fake partner calls webhook | Inject false shipment events | Partner app role, client credential/certificate, `carrier_id` check, APIM subscription, rate limit | Partner token `azp` mismatch, event anomaly |
 | S3 | Rogue workload uses another service identity | Lateral movement | One managed identity per workload, federated credential subject restriction, network policy | Entra workload identity sign-in logs, Key Vault access logs |
 | S4 | Forged JWT with `alg=none` or wrong key | Bypass auth | Algorithm allow-list, signature verification, issuer/audience validation | APIM/API 401 metrics, WAF logs |
@@ -110,8 +110,8 @@ For this project, the most important consequence is:
 | E2 | Container escape / privileged pod | Node/cluster compromise | PSS restricted, no privileged pods, seccomp, read-only root FS, network policy | Defender for Containers, pod security alerts |
 | E3 | SSRF to IMDS | Managed identity token theft | Egress allow-list, network policy, block link-local metadata from app pods if possible, minimal identity permissions | Anomalous token use, firewall logs |
 | E4 | SQL injection | Data modification | Parameterized queries/ORM, input validation, least-privilege DB user | WAF, SQL audit, anomaly alerts |
-| E5 | Role assignment abuse | Persistence | PIM, approval, deny assignments, review | Entra audit logs, Azure Activity Log |
-| E6 | Compromised developer account | Code/pipeline takeover | MFA, Conditional Access, branch protection, CODEOWNERS, signed commits | GitHub audit log, impossible travel |
+| E5 | Role assignment abuse | Persistence | Manual JIT, approval, deny assignments, quarterly review; no PIM on Free | Entra audit logs, Azure Activity Log |
+| E6 | Compromised developer account | Code/pipeline takeover | MFA (security defaults), branch protection, CODEOWNERS, signed commits | GitHub audit log, impossible travel |
 
 ### 3.7 Additional supply-chain and configuration threats
 
@@ -134,7 +134,7 @@ For this project, the most important consequence is:
 
 **Controls:**
 
-- Conditional Access requires compliant device and MFA for managers.
+- Security defaults require MFA for managers, but the Free tier has **no device-compliance or location-based Conditional Access**. A stolen token can be replayed from another device until it expires or is revoked.
 - Token lifetime is short; continuous access evaluation (CAE) can revoke faster.
 - Delete requires `Logistics.Manager` and writes an immutable audit event.
 - APIM rate limit and anomaly alert on high-volume deletes.
@@ -289,8 +289,8 @@ For this project, the most important consequence is:
 
 ### 6.3 Break-glass procedure
 
-- Two cloud-only break-glass accounts, hardware-key protected.
-- Excluded from normal Conditional Access but monitored by a separate alert.
+- Two cloud-only break-glass accounts, hardware-key/MFA protected.
+- On Entra ID Free, security defaults cannot be scoped to exclude these accounts; they must still complete MFA. Monitor them with a separate alert instead of relying on a Conditional Access exclusion.
 - Stored credentials in a physical safe or sealed envelope, not in the repo.
 - Any use triggers a high-priority alert and a post-use review.
 - Test the procedure quarterly.
@@ -306,11 +306,12 @@ For this project, the most important consequence is:
 | Self-signed certificate in lab | No domain | CA-issued certificate, automated rotation |
 | WAF initially in detection mode | Avoid blocking the build | Tune and switch to prevention before go-live |
 | No external penetration test | Time | Pre-production pen test and remediation |
-| Basic firewall in lab | Cost | Premium with IDPS/TLS inspection in production |
+| Basic/Standard firewall in lab | Cost | Premium with IDPS/TLS inspection in production |
 | Limited load testing | Time | Load test at 2x expected peak, chaos exercise |
 | Image signing may be a stretch goal | Tooling complexity | Enforce signature admission in production |
+| Entra ID Free: no Conditional Access, PIM, access reviews, or risk policies | Licensing constraint | Buy P1/P2 or Entra ID Governance; until then use security defaults, manual JIT, quarterly reviews, and sign-in alerts |
 
-Do not hide these. A mature DevOps engineer states the gap and the plan.
+Do not hide these. A mature DevOps engineer states the gap and the plan. See [ADR-0011](../adr/0011-entra-id-free-license.md).
 
 ---
 
@@ -319,6 +320,7 @@ Do not hide these. A mature DevOps engineer states the gap and the plan.
 - [ ] Every threat in the STRIDE table has a preventive and a detective control.
 - [ ] The attack-path exercise has a first control and a detection for each path.
 - [ ] The RBAC matrix includes negative tests.
+- [ ] Security defaults are enabled, and no control claims Conditional Access or PIM on the Free tier.
 - [ ] The pipeline gates are implemented in YAML, not just documented.
 - [ ] The alert table has an owner and a runbook.
 - [ ] The break-glass procedure is documented and tested.

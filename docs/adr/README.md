@@ -4,7 +4,7 @@ An ADR captures a decision that is expensive to reverse, the context at the time
 
 **Status values:** Proposed -> Accepted -> Superseded / Deprecated
 
-All ADRs below are **Proposed** on Day 1. Mark them **Accepted** after your architecture review, or change them before you write Terraform. If a decision changes during the week, update the ADR in the same pull request as the code.
+Most ADRs below are **Proposed** on Day 1. Mark them **Accepted** after your architecture review, or change them before you write Terraform. ADR-0011 is **Accepted** because the Entra ID Free license is a fixed project constraint. If a decision changes during the week, update the ADR in the same pull request as the code.
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -18,6 +18,7 @@ All ADRs below are **Proposed** on Day 1. Mark them **Accepted** after your arch
 | [0008](0008-ansible-scope.md) | Ansible for Linux/agent hardening and Kubernetes baseline | Proposed |
 | [0009](0009-build-release-separation.md) | Separate build and release pipelines and identities | Proposed |
 | [0010](0010-authn-authz-separation.md) | Authentication and authorization are separate concerns | Proposed |
+| [0011](0011-entra-id-free-license.md) | Operate with Microsoft Entra ID Free and compensating controls | Accepted |
 
 ## Writing a new ADR
 

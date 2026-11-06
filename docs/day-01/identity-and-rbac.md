@@ -1,6 +1,6 @@
 # Identity, Authentication, Authorization, and RBAC
 
-**Status:** Proposed for Day 1 review
+**Status:** Accepted with the Entra ID Free constraint (ADR-0011)
 **Scope:** Users, partners, workloads, pipelines, and platform administrators
 
 ---
@@ -9,15 +9,36 @@
 
 | Layer | Question | Owner | Mechanism |
 |---|---|---|---|
-| Authentication (authN) | Who are you? | Microsoft Entra ID | OIDC/OAuth 2.0, MFA, Conditional Access, token signature |
+| Authentication (authN) | Who are you? | Microsoft Entra ID | OIDC/OAuth 2.0, MFA via security defaults, token signature |
 | Authorization (authZ) | What may you do? | API and APIM | App roles, scopes, route policy, resource ownership |
 | Workload identity | What may this service do? | Platform | Managed identity / workload identity federation |
-| Cloud RBAC | What may this principal change in Azure? | Platform | Azure RBAC, PIM, scoped role assignments |
+| Cloud RBAC | What may this principal change in Azure? | Platform | Azure RBAC, manual JIT, scoped role assignments |
 | Data authorization | Which rows may this user see? | Application + database | Ownership predicate, row-level security if needed |
 
 **Authentication must not be treated as authorization.** A valid token proves identity. It does not prove permission. A logged-in user with no role must receive `403`, not a default allow.
 
 **A token is not a session.** The API should not create a server-side session from a JWT, should not accept ID tokens as API credentials, and should not put tokens in URLs or logs. Interactive clients use authorization code + PKCE and keep refresh tokens on the client. Service clients use client credentials or, better, workload identity federation.
+
+### 1.1 Entra ID Free is a project constraint
+
+This tenant has **Microsoft Entra ID Free**, not P1/P2. (Entra editions are Free, P1, and P2; "Premium v2" is an APIM tier, not an Entra license.) The design must not assume Conditional Access or PIM.
+
+| Capability | Entra ID Free | Replacement in this project |
+|---|---|---|
+| OIDC/OAuth 2.0, app registrations, app roles, groups | Yes | Use as designed |
+| Managed identities | Yes | Use as designed |
+| Workload identity federation | Yes | Use as designed |
+| Security defaults / MFA | Yes (all-or-nothing, Authenticator app) | Enable security defaults; no per-group Conditional Access |
+| Conditional Access | No (P1) | Security defaults + admin discipline; document the gap |
+| PIM / time-bound role activation | No (P2) | Manual JIT request/approval, separate admin account, remove after task |
+| Access reviews | No (P2/Governance) | Manual quarterly review with exported assignments |
+| Risk-based policies / ID Protection | No (P2) | Sign-in log alerts; no automated risk remediation |
+| Custom Entra roles | No (P1) | Built-in roles only |
+| Sign-in and audit logs | Yes | Export to Log Analytics; alert on identity changes |
+
+Read [ADR-0011](../adr/0011-entra-id-free-license.md) for the full decision and compensating controls. The rest of this document describes the target design; where it says "PIM" or "Conditional Access" in a historical context, the Free-tier control above applies.
+
+**Immediate action:** in the Entra admin center, verify that **security defaults** are enabled. If they are disabled, either enable them or document the existing MFA enforcement and the reason it is equivalent. Do not leave the tenant with password-only sign-in and call it zero trust.
 
 ---
 
@@ -43,7 +64,7 @@
 | `grp-log-order-readers` | Customer service | `Order.Reader` |
 | `grp-log-order-contributors` | Customer service | `Order.Reader`, `Order.Contributor` |
 | `grp-log-managers` | Logistics managers | `Inventory.Reader`, `Inventory.Contributor`, `Order.Reader`, `Order.Contributor`, `Logistics.Manager` |
-| `grp-log-platform-admins` | Platform team | No app role; Entra/Azure admin via PIM |
+| `grp-log-platform-admins` | Platform team | No app role; manual JIT platform administration |
 | `grp-log-security-auditors` | Security | No app role; read-only Azure/Log Analytics |
 
 Use groups, not individual assignments, for business roles. Group membership changes are auditable and reviewable. Keep group owners accountable.
@@ -180,13 +201,15 @@ Never log `Authorization`, `Cookie`, `Set-Cookie`, full request bodies, or token
 
 | Principal | Permanent | Just-in-time | Approval |
 |---|---|---|---|
-| Platform engineer | Reader at subscription | Contributor on platform RG | PIM, 4 hours |
-| Platform engineer | Reader at subscription | Contributor on workload RG (prod) | PIM, 2 hours, peer approval |
-| Security auditor | Reader + Log Analytics Reader | None | Quarterly access review |
-| Developer | Reader on workload RG | None for prod; dev Contributor via PIM | Team lead approval |
-| Break-glass | None | Owner at subscription | Hardware key, alerting, post-use review |
+| Platform engineer | Reader at subscription | Contributor on platform RG | Manual JIT request, 4-hour window, remove after task |
+| Platform engineer | Reader at subscription | Contributor on workload RG (prod) | Manual JIT, 2-hour window, peer approval |
+| Security auditor | Reader + Log Analytics Reader | None | Manual quarterly access review |
+| Developer | Reader on workload RG | None for prod; dev Contributor by named request | Team lead approval |
+| Break-glass | None | Owner at subscription | Hardware key/MFA, alerting, post-use review |
 
-No standing `Owner` at subscription scope. No standing `User Access Administrator`. Use PIM and access reviews.
+No standing `Owner` at subscription scope. No standing `User Access Administrator`. Without PIM, there is **no native time-bound activation**: the ticket, the separate admin account, the short window, and the post-use removal are the controls. Remove the assignment when the task is done and verify it is gone.
+
+Every manual JIT record includes: requester, role, scope, reason, start/end time, approver, and change ticket. Do not store these records in Git if they contain account identifiers.
 
 ### 5.2 Pipeline identities
 
@@ -233,7 +256,7 @@ Azure SQL uses Entra-only authentication:
 - Use Azure RBAC, not access policies.
 - App Gateway and APIM: `Key Vault Secrets User`.
 - Release identity: `Key Vault Certificates Officer` if it imports the TLS certificate; otherwise no data-plane access.
-- Humans: no permanent secret read. Use PIM for `Key Vault Secrets User` when troubleshooting.
+- Humans: no permanent secret read. Use a manual JIT request for `Key Vault Secrets User`, time-boxed to the troubleshooting window, then remove it.
 - Enable purge protection and soft delete. Do not let a pipeline purge the vault.
 - Rotate certificates and CMKs on a schedule; alert before expiry.
 
@@ -289,7 +312,7 @@ No secret is stored in the pipeline. If a tool cannot use OIDC, use a managed id
 ```text
 1. User opens the client app.
 2. Client redirects to Entra ID with authorization code + PKCE.
-3. User completes MFA / Conditional Access.
+3. User completes MFA (security defaults; no Conditional Access on Free).
 4. Client receives an authorization code and exchanges it for:
    - access token (audience api://logistics-api)
    - ID token (client only; never sent to the API)
@@ -359,10 +382,11 @@ Add these to the Day 4 test suite. A positive-only test suite is not a security 
   - New app role assignments.
   - New service principals or federated credentials.
   - Key Vault secret/certificate reads outside deployment windows.
-  - PIM activations outside business hours.
-- Run quarterly access reviews for groups and app roles.
+  - Privileged role assignments created outside the JIT process.
+  - Changes to security defaults, app credentials, or federated credentials.
+- Run a **manual quarterly access review** for groups, app roles, and Azure role assignments. Export the current state, review with the owner, remove stale access, and keep the sign-off.
 - Remove departed users/groups within the joiner-mover-leaver SLA.
-- Keep two break-glass accounts, cloud-only, hardware-key protected, monitored, and excluded from normal automation.
+- Keep two break-glass accounts, cloud-only, hardware-key/MFA protected, monitored, and tested. Security defaults cannot exclude them, so plan for MFA on those accounts.
 - Test restore of the audit logs and the Key Vault soft-delete recovery.
 
 ---
@@ -377,7 +401,7 @@ Add these to the Day 4 test suite. A positive-only test suite is not a security 
 | Using `sub` as a database key | Pairwise per app; hard to reconcile | Use `oid` or an internal mapping |
 | Giving the API `db_owner` | A SQL injection becomes a full database compromise | `db_datareader`/`db_datawriter` |
 | Sharing one managed identity across services | No blast-radius containment | One identity per workload |
-| Permanent Owner for engineers | One phishing click owns the subscription | PIM, time-bound, approval |
+| Permanent Owner for engineers | One phishing click owns the subscription | Separate admin account, manual JIT, remove after task, quarterly review |
 | PATs in service connections | Long-lived secrets sprawl | Workload identity federation |
 | Logging tokens | Credential leakage | Redact headers; log correlation ID |
 | Trusting the network | Any compromised pod can call any service | Identity + network policy + least privilege |

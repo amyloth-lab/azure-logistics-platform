@@ -9,7 +9,7 @@ Fill this in before you reply `EOD`. Keep it short. The goal is to prove you can
 ## 1. Scope and assumptions
 
 - Azure subscription:
-- Entra tenant / license tier:
+- Entra tenant / license tier (this project: Free):
 - Region:
 - Domain (public API hostname, not the Entra tenant domain):
 - Lab or production-shaped budget:

@@ -50,7 +50,7 @@ Link every PR to a work item. Keep acceptance criteria testable. If a story cann
 | Day | Theme | Primary outcome | Exit criteria |
 |---|---|---|---|
 | 1 | Architecture and guardrails | Approved design, repo, board | Diagrams, CIDR plan, RBAC matrix, threat model, ADRs, GitHub, Azure Boards |
-| 2 | Foundation | Remote Terraform state + hub network + shared security | State in Blob with locking, hub applied, policy assigned, private DNS resolver, Log Analytics, Key Vault |
+| 2 | Foundation | Remote Terraform state + hub network + shared security | State in Blob with locking, hub applied, firewall/Bastion/DNS zones/Log Analytics, policy guardrail, budget |
 | 3 | Platform | Spokes + data + AKS + APIM + App Service + Functions + Ansible | Private endpoints resolve, AKS/APIM/App Service deployed, ACR pull works, Ansible idempotent |
 | 4 | Application and CI | FastAPI + Entra auth + RBAC + build pipeline | Tests pass, image in ACR, SBOM/signature, build artifact traceable |
 | 5 | Release and operations | Release pipeline, dev deploy, prod approval gate, runbook | Dev endpoint works, prod stage blocked on approval, alerts/runbook, cost/cleanup |
@@ -103,35 +103,35 @@ If you have only 3 hours, do the design sections and repo; move the Azure DevOps
 ### 4.1 Bootstrap the Terraform state
 
 - Create a dedicated resource group for state: `rg-logistics-tfstate`.
-- Storage account: `stlogisticstfstate<unique>`, `Standard_GRS` or `ZRS`, TLS 1.2, public access disabled, shared key disabled, Entra-only auth.
+- Storage account: `stlogisticstfstate<unique>`, `Standard_GRS` or `ZRS`, TLS 1.2, public endpoint temporarily restricted to the deployer IP, shared key disabled, Entra-only auth.
 - Container: `tfstate`.
-- Enable versioning, soft delete (90 days), change feed, immutable policy for state blobs if feasible.
-- Private endpoint in the management VNet; private DNS zone `privatelink.blob.core.windows.net`.
-- Grant the release identity `Storage Blob Data Contributor` on the container.
-- Bootstrap with Azure CLI and local state only for the bootstrap stack; migrate to remote backend immediately. Document the chicken-and-egg step.
+- Enable versioning, soft delete (30 days in the lab, 90 in production), change feed, and an immutable policy if feasible.
+- Private endpoint in the management VNet; private DNS zone `privatelink.blob.core.windows.net` (Day 3).
+- Grant the deployer `Storage Blob Data Contributor` now; grant the release identity the same on Day 3/4.
+- Bootstrap with a small Terraform stack using local state, then migrate to the remote backend immediately. Document the chicken-and-egg step.
 
 ### 4.2 Build the hub
 
 - `vnet-hub` and subnets.
-- Azure Firewall (Basic in lab, Premium in prod), policy, public IP, forced tunneling decision.
+- Azure Firewall (Basic or Standard in lab, Premium in prod), policy, public IP, forced tunneling decision.
 - Azure Bastion.
 - VPN/ExpressRoute gateway (optional for the lab; Terraform module ready).
-- Private DNS Resolver inbound/outbound.
+- Private DNS zones linked to the hub (resolver and spoke links come on Day 3).
 - Route tables and NSGs.
 - Log Analytics workspace, diagnostic settings, retention, daily cap.
-- Key Vault for TLS/CMK, private endpoint, purge protection.
-- Azure Policy initiative: allowed locations, required tags, deny public IPs outside the approved edge/hub resource groups, deny public blob, require private endpoints, require TLS, deny local auth for SQL, require diagnostic settings.
-- Managed identities for App Gateway, APIM, AKS workload, App Service, Functions, migration.
+- Azure Policy guardrail: deny public IPs outside the approved edge/hub resource groups.
 - Budget and alerts.
+
+Day 2 does not create Key Vault, private endpoints, managed identities, AKS, or APIM. Those are Day 3. Do not let a Day 2 time overrun force insecure shortcuts on Day 3.
 
 ### 4.3 Exit criteria
 
 - [ ] `terraform init` uses the remote backend; state lock works.
 - [ ] `terraform plan` is clean and reviewed; `terraform apply` succeeds.
-- [ ] State storage has no public access and no shared key.
-- [ ] Hub firewall, Bastion, DNS resolver, and Log Analytics are deployed.
-- [ ] Policy assignments are visible in Defender for Cloud.
-- [ ] No secrets in the repo; pipeline identity can read/write state only.
+- [ ] State storage has no shared key; the temporary public IP allow-list is documented and will be removed on Day 3.
+- [ ] Hub firewall, Bastion, private DNS zones, and Log Analytics are deployed.
+- [ ] Policy assignment is visible in Azure Policy.
+- [ ] No secrets in the repo; the deployer can read/write state only through Entra ID.
 
 ---
 
@@ -143,7 +143,8 @@ If you have only 3 hours, do the design sections and repo; move the Azure DevOps
 
 - Spokes: ingress, workload, data, management.
 - VNet peering, route tables, NSGs, private endpoints.
-- Private DNS zones and links.
+- Private DNS zones and links; Private DNS Resolver inbound/outbound.
+- Terraform state private endpoint; disable the temporary public state endpoint.
 - Azure SQL: server, database, Entra admin, auditing, TDE/CMK, PITR/LTR, private endpoint.
 - Azure Managed Redis: private endpoint, Entra auth, TLS, disable access keys.
 - Blob Storage: containers, private endpoint, versioning, soft delete, immutability, lifecycle.
@@ -153,6 +154,7 @@ If you have only 3 hours, do the design sections and repo; move the Azure DevOps
 ### 5.2 Compute and gateway
 
 - ACR Premium: private endpoint, admin disabled, retention, scan.
+- Managed identities for App Gateway, APIM, AKS workload, App Service, Functions, and migration.
 - AKS: private cluster, system/user pools, CNI Overlay, network policy, workload identity, Key Vault CSI, internal ingress, PDB/HPA, PSS.
 - App Service: Linux Python, VNet integration, private endpoint, slots, managed identity.
 - Functions: Flex Consumption, VNet integration, Service Bus trigger, managed identity.
@@ -255,7 +257,7 @@ These are planning ranges, not quotes. Verify in the Azure Pricing Calculator fo
 |---|---|---|
 | App Gateway WAF_v2 | USD 250-450 | USD 250-450+ |
 | DDoS Protection | Platform protection included; optional IP/Network plan extra | Optional plan; Network Protection is a significant fixed cost |
-| Azure Firewall | Basic USD 300-400 | Premium USD 900-1,300 |
+| Azure Firewall | Basic USD 300-400; Standard ~USD 900-1,000 | Standard/Premium USD 900-1,300+ |
 | AKS nodes | USD 150-300 | USD 300-700 |
 | APIM | Standard v2 USD 250-400 | Standard v2/Premium v2 higher |
 | App Service | B1/P1v3 USD 50-200 | P1v3+ USD 150-400 |
@@ -280,7 +282,7 @@ A five-day build that is destroyed nightly can cost roughly **USD 150-300**, dep
 - Set Log Analytics daily cap in dev.
 - Use SQL serverless auto-pause in dev.
 - Use AKS cluster stop/start or destroy nightly.
-- Use Basic firewall in dev; Premium only for the IDPS demonstration.
+- Use Basic (or Standard if Basic is unavailable) in dev; Premium only for the IDPS demonstration.
 - Do not deploy prod until Day 5; use a plan-only prod stage for the approval demonstration.
 - Delete orphan public IPs, disks, and NICs after `terraform destroy`.
 - Review Cost Management every morning during the build.
@@ -303,7 +305,7 @@ Cutting these saves a few dollars and creates a false sense of completion.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Azure quota unavailable for AKS/App Service | Medium | Schedule slip | Check quota Day 1; request early; choose another region if needed |
-| Entra P1/P2 unavailable | Medium | No PIM/Conditional Access | Document compensating controls; use time-bound RBAC and MFA |
+| Entra ID Free (no P1/P2) | **Confirmed constraint** | No Conditional Access, PIM, access reviews, or risk policies | Security defaults, separate admin accounts, manual JIT, quarterly reviews, sign-in alerts; see ADR-0011 |
 | APIM Standard v2 feature mismatch | Medium | Rework | Confirm private endpoint + outbound integration before Terraform; prototype Day 2 |
 | Private DNS misconfiguration | High | Everything looks broken | Link zones to every VNet; test with `nslookup` from each spoke |
 | App Service worker IP overlap | Low/Medium | Silent routing failures | Avoid 10.70/10.71 and documented ranges; validate before deployment |
@@ -404,7 +406,7 @@ A smaller, honest vertical slice is better than a broad, insecure demo.
 | No FinOps chargeback | Cost accountability | Tags, budgets, showback per team |
 | Manual certificate rotation | Expiry outage | Automate rotation and alert 30/14/7 days before |
 | No incident response playbook | Slow containment | Runbooks, tabletop, contact tree |
-| No access reviews | Privilege creep | Quarterly group/app role reviews |
+| Entra ID Free: no Conditional Access, PIM, access reviews, or risk policies | Weaker identity protection and privilege control | Buy P1/P2 or use documented compensating controls; manual quarterly reviews |
 | No DR runbook | Extended outage | Document RTO/RPO, test failover |
 
 ---

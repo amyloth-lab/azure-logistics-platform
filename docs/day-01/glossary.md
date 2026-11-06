@@ -34,8 +34,9 @@ Short definitions in the context of this project. If a term is not here, check M
 | **Scope** | Permission requested by a client, such as `Orders.Read`. |
 | **App role** | A role defined by an API app registration and assigned to users/groups/apps, such as `Logistics.Manager`. |
 | **RBAC** | Role-based access control. Azure RBAC controls cloud resources; app roles control business actions. |
-| **PIM** | Privileged Identity Management. Just-in-time, approval-based activation of privileged roles. |
-| **Conditional Access** | Entra policy that grants access only if conditions (MFA, device compliance, location) are met. |
+| **PIM** | Privileged Identity Management. Just-in-time, approval-based activation of privileged roles. Requires Entra ID P2; **not available in this Free-tier project**. |
+| **Conditional Access** | Entra policy that grants access only if conditions (MFA, device compliance, location) are met. Requires Entra ID P1; **not available here**. |
+| **Security defaults** | Free Entra baseline that requires MFA for users and blocks legacy authentication. All-or-nothing; used instead of Conditional Access. |
 | **Managed identity** | An Azure-managed identity for a workload, so it can get tokens without a secret. |
 | **Workload identity** | AKS feature that federates a Kubernetes service account to an Entra identity. |
 | **Service principal** | An identity for an application/service in Entra. |

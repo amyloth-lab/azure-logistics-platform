@@ -115,7 +115,7 @@ Open both diagrams side by side:
 
 ```text
 User or partner
-  -> Microsoft Entra ID (OIDC/OAuth 2.0, MFA, Conditional Access)
+  -> Microsoft Entra ID (OIDC/OAuth 2.0, MFA via security defaults)
   -> access token (JWT)
   -> https://api.logistics.example.com
   -> Application Gateway WAF_v2 (public IP, TLS, WAF, platform DDoS)
@@ -154,7 +154,7 @@ This is a deliberate split by operational characteristics, not a random tour of 
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Identity | Microsoft Entra ID | Native OIDC/OAuth 2.0, app roles, Conditional Access, PIM |
+| Identity | Microsoft Entra ID Free | OIDC/OAuth 2.0, app roles, security defaults, manual JIT; no P1/P2 features |
 | Public edge | Application Gateway WAF_v2 | WAF, TLS termination, platform DDoS, private backend |
 | API gateway | APIM Standard v2 | Private inbound endpoint plus outbound VNet integration; no classic Premium cost |
 | Core compute | AKS private cluster | Container portability, network policy, workload identity |
@@ -340,11 +340,11 @@ Read the full design: [identity-and-rbac.md](identity-and-rbac.md).
 
 | Concern | Question | Mechanism |
 |---|---|---|
-| Authentication | Who are you? | Entra ID OIDC/OAuth 2.0, MFA, Conditional Access |
+| Authentication | Who are you? | Entra ID OIDC/OAuth 2.0, MFA via security defaults |
 | Authorization | What may you do? | App roles/scopes, route policy, resource ownership |
 | Token | What proof travels? | Short-lived JWT access token |
 | Workload identity | What is this service allowed to do? | Managed identity / workload identity federation |
-| Admin access | Who can change the platform? | Azure RBAC + PIM, just-in-time |
+| Admin access | Who can change the platform? | Azure RBAC + manual JIT; no PIM on Free |
 
 **Do not:**
 
@@ -366,7 +366,7 @@ Read the full design: [identity-and-rbac.md](identity-and-rbac.md).
 | Security group | `grp-log-order-readers` | Read own orders |
 | Security group | `grp-log-order-contributors` | Create/update own orders |
 | Security group | `grp-log-managers` | Read all, delete inventory/orders, approve |
-| Security group | `grp-log-platform-admins` | PIM-eligible platform administration |
+| Security group | `grp-log-platform-admins` | Platform administration by manual JIT |
 | Security group | `grp-log-security-auditors` | Read-only audit access |
 
 ### 5.3 App roles
@@ -425,8 +425,8 @@ Managers are the only business role allowed to delete inventory and orders. This
 | Principal | Scope | Role | Notes |
 |---|---|---|---|
 | Human platform engineer | Subscription | Reader | Permanent baseline |
-| Human platform engineer | Platform RG | Contributor | PIM-eligible, time-bound |
-| Human platform engineer | Workload RG (prod) | Contributor | PIM-eligible, approval required |
+| Human platform engineer | Platform RG | Contributor | Manual JIT, separate admin account, remove after task |
+| Human platform engineer | Workload RG (prod) | Contributor | Manual JIT, peer approval, remove after task |
 | Security auditor | Subscription | Reader + Log Analytics Reader | No data plane |
 | Build identity | ACR | AcrPush | Cannot deploy |
 | Release identity (dev) | Workload RG (dev) | Contributor + Role Based Access Control Administrator | Scoped; no subscription Owner |
@@ -490,8 +490,8 @@ Read the full model: [zero-trust-threat-model.md](zero-trust-threat-model.md).
 
 | Pillar | What it means here | Evidence |
 |---|---|---|
-| Verify explicitly | Entra ID, MFA, Conditional Access, token validation at two layers, mTLS to backends | APIM policy, API dependency, sign-in logs |
-| Least privilege | App roles, ownership checks, PIM, scoped pipeline identities, no shared admin | RBAC matrix, role assignments, PIM schedule |
+| Verify explicitly | Entra ID, MFA via security defaults, token validation at two layers, mTLS to backends | APIM policy, API dependency, sign-in logs |
+| Least privilege | App roles, ownership checks, manual JIT, scoped pipeline identities, no shared admin | RBAC matrix, role assignments, JIT tickets |
 | Assume breach | Segmentation, private endpoints, WAF, IDPS, network policy, anomaly alerts, backups | NSGs, firewall logs, Defender alerts, restore test |
 | Encrypt | TLS 1.2+, TDE/CMK, HTTPS to storage, encrypted Service Bus | Config exports, Key Vault keys |
 | Observe | Central logs, traces, audit, correlation ID, SLO alerts | App Insights, Log Analytics, Sentinel |
@@ -506,7 +506,7 @@ Read the full model: [zero-trust-threat-model.md](zero-trust-threat-model.md).
 | Repudiation | "I did not delete that order" | SQL auditing, immutable audit blob, correlation ID, Sentinel |
 | Information disclosure | Public blob or verbose error | Private endpoints, no public access, error scrubbing, CMK |
 | Denial of service | API flood or expensive query | WAF rate limit, APIM quota, Redis cache, SQL tuning, autoscale |
-| Elevation of privilege | Over-broad pipeline role; container escape | Scoped identities, PIM, pod security, network policy, no privileged pods |
+| Elevation of privilege | Over-broad pipeline role; container escape | Scoped identities, manual JIT, pod security, network policy, no privileged pods |
 
 ### 6.3 Attack-path exercise
 
@@ -531,7 +531,7 @@ If you cannot name a preventive control and a detective control, the design is i
 
 Read the ADR index: [../adr/README.md](../adr/README.md).
 
-Write or review these ten ADRs:
+Write or review these ADRs:
 
 | ADR | Decision |
 |---|---|
@@ -545,6 +545,7 @@ Write or review these ten ADRs:
 | 0008 | Ansible scope: Linux/agent hardening and Kubernetes baseline |
 | 0009 | Separate build and release pipelines with separate identities |
 | 0010 | Authentication and authorization are separate concerns |
+| 0011 | Operate with Entra ID Free and documented compensating controls |
 
 An ADR is not an essay. It is a decision with consequences. If a decision changes on Day 2, update the ADR; do not let the document drift.
 
@@ -555,7 +556,7 @@ An ADR is not an essay. It is a decision with consequences. If a decision change
 ### 8.1 Accounts and access checklist
 
 - [ ] Azure subscription where you can create resource groups, role assignments, and policies.
-- [ ] Microsoft Entra tenant. P1 covers Conditional Access; P2 adds PIM and access reviews. If you do not have P1/P2, record the compensating controls.
+- [ ] Microsoft Entra tenant. **This project uses Entra ID Free.** Security defaults provide MFA, but Conditional Access, PIM, access reviews, and risk policies are unavailable. Use [ADR-0011](../adr/0011-entra-id-free-license.md) and record the compensating controls. (P1 adds Conditional Access; P2 adds PIM/access reviews if the budget changes.)
 - [ ] GitHub account and a private repository. Branch protection for private repositories may require GitHub Pro/Team/Enterprise; check your plan before relying on it.
 - [ ] Azure DevOps organization, Basic access, and at least one parallel job (Microsoft-hosted minutes or a self-hosted agent).
 - [ ] GitHub Copilot access in VS Code.
@@ -922,9 +923,10 @@ Do not start Day 2 until all of these are true:
 - [ ] The CIDR plan has no overlaps with VNets, on-prem, AKS services/pods, or App Service worker ranges.
 - [ ] Every subnet has a purpose, a CIDR, and an owner.
 - [ ] The RBAC matrix includes manager-only deletes and own-order access.
+- [ ] The Entra ID Free constraint is documented and security defaults are enabled (or the gap is explicitly accepted).
 - [ ] Authentication and authorization are described separately.
 - [ ] At least 10 STRIDE threats have preventive and detective controls.
-- [ ] Ten ADRs exist and are marked Accepted or Proposed.
+- [ ] Eleven ADRs exist and are marked Accepted or Proposed.
 - [ ] The GitHub repo is pushed and `main` is protected.
 - [ ] `gitleaks` is clean.
 - [ ] The Azure DevOps project, Sprint 1, and backlog exist.

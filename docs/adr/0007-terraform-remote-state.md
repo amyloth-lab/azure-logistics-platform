@@ -14,15 +14,17 @@ Terraform state contains resource IDs, IP addresses, and sometimes sensitive val
 Use an Azure Storage account and Blob container as the Terraform backend:
 
 - Dedicated resource group `rg-logistics-tfstate`.
-- Storage account with TLS 1.2, public network access disabled, shared key access disabled, Entra-only auth.
+- Storage account with TLS 1.2, public network access disabled after bootstrap, shared key access disabled, Entra-only auth.
 - Private endpoint in the management VNet; private DNS `privatelink.blob.core.windows.net`.
-- Container `tfstate`; one state key per environment and stack (`dev/network.tfstate`, `dev/platform.tfstate`, `prod/...`).
-- Enable blob versioning, soft delete (90 days), change feed, and an immutable policy where operationally feasible.
+- Container `tfstate`; one state key per environment and stack (`dev/network.tfstate`, `dev/hub.tfstate`, `prod/...`).
+- Enable blob versioning, soft delete (30 days in the lab, 90 in production), change feed, and an immutable policy where operationally feasible.
 - State locking via Blob lease.
-- Release identity gets `Storage Blob Data Contributor` on the container only.
-- Bootstrap the storage account with Azure CLI and a constrained bootstrap identity; do not keep bootstrap state local after migration.
+- The deployer/release identity gets `Storage Blob Data Contributor` on the state storage account/container; no broader subscription data-plane role.
+- Bootstrap with a small Terraform stack using local state, then migrate that state into the Blob backend. Do not leave the bootstrap state local.
 - Backend configuration uses `use_azuread_auth = true`; no storage account keys.
 - CI runs `terraform plan` with `-lock=false` only for read-only plan jobs; apply uses the lock.
+
+**Bootstrap exception:** the state storage is created before the management VNet and private endpoint exist. Until Day 3 creates the private endpoint, the storage account keeps a public endpoint with `default_action = "Deny"`, an IP allow-list containing only the deployer's public IP, Entra-only auth, and shared keys disabled. This is a time-boxed exception, not the target state. Day 3 adds the private endpoint, links `privatelink.blob.core.windows.net`, and disables public network access.
 
 ## Consequences
 

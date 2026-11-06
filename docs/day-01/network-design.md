@@ -64,7 +64,7 @@ Azure reserves the first four and last IP address of each subnet. Do not assign 
 | Subnet | CIDR | Delegation | NSG | Route table | Notes |
 |---|---|---|---|---|---|
 | `AzureFirewallSubnet` | `10.0.0.0/26` | None | Not supported | None | Azure Firewall |
-| `AzureFirewallManagementSubnet` | `10.0.0.64/26` | None | Not supported | None | Forced tunneling only |
+| `AzureFirewallManagementSubnet` | `10.0.0.64/26` | None | Not supported | None | Basic SKU management NIC (always) and forced tunneling |
 | `AzureBastionSubnet` | `10.0.1.0/26` | None | Required | None | Azure Bastion |
 | `GatewaySubnet` | `10.0.2.0/27` | None | Not supported | None | VPN/ExpressRoute |
 | `snet-dns-inbound` | `10.0.3.0/28` | None | Required | None | Private DNS Resolver inbound |
@@ -180,7 +180,7 @@ On-premises 192.168.0.0/16
 
 ```text
 Engineer
-  -> Microsoft Entra ID + MFA + Conditional Access
+  -> Microsoft Entra ID + MFA via security defaults (Free tier; no Conditional Access)
   -> Azure Bastion (public IP, managed)
   -> private Linux VM (agents or Ansible)
   -> private endpoints / AKS API

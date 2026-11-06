@@ -331,7 +331,7 @@ def logical_architecture() -> Path:
         d,
         (40, 580, 580, 760),
         "Microsoft Entra ID",
-        "OIDC / OAuth 2.0 | app roles + scopes | security groups\nConditional Access + PIM | workload identity federation",
+        "OIDC/OAuth 2.0 | app roles\nMFA (Security Defaults)\nmanual JIT",
         fill=BLUE_FILL,
         outline="#AFC4F5",
         accent=BLUE,
@@ -688,7 +688,7 @@ def network_topology() -> Path:
     # External top
     card(d, (100, 160, 850, 330), "Internet / API consumers", "Entra ID access token over TLS 1.2+\napi.logistics.example.com -> App Gateway public IP",
          fill=AMBER_FILL, outline="#E8C98E", accent=AMBER, title_size=26, sub_size=17)
-    card(d, (1100, 160, 1900, 330), "Microsoft Entra ID", "OIDC / OAuth 2.0 | app roles + scopes\nConditional Access | PIM | workload identities",
+    card(d, (1100, 160, 1900, 330), "Microsoft Entra ID", "OIDC / OAuth 2.0 | app roles + scopes\nSecurity Defaults | manual JIT | workload identities",
          fill=BLUE_FILL, outline="#AFC4F5", accent=BLUE, title_size=26, sub_size=17)
     card(d, (2150, 160, 2900, 330), "On-premises ERP / WMS", "192.168.0.0/16\nsite-to-site VPN or ExpressRoute",
          fill=SLATE_FILL, outline="#CBD5E1", accent=SLATE, title_size=26, sub_size=17)
