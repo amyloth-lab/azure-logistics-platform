@@ -35,6 +35,7 @@ REQUIRED = [
     "docs/day-01/azure-boards-import.csv",
     "docs/day-02/README.md",
     "docs/day-03/README.md",
+    "docs/day-03b/README.md",
     "infra/terraform/bootstrap/main.tf",
     "infra/terraform/envs/dev/main.tf",
     "docs/adr/README.md",

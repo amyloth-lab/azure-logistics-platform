@@ -21,7 +21,7 @@ A first-job DevOps engineer often starts with Terraform because it feels product
 9. **Make it observable.** If you cannot see it, you cannot operate it.
 10. **Write down the decision and the gap.** ADRs and a runbook are part of the deliverable.
 
-This course is structured to force those habits. Day 1 is design. Day 2 is the secure foundation. Day 3 is the platform. Day 4 is the application and build. Day 5 is release and operations.
+This course is structured to force those habits. Day 1 is design. Day 2 is the secure foundation. Day 3 is split into 3A (network and data) and 3B (compute and edge). Day 4 is the application and build. Day 5 is release and operations.
 
 ### 1.1 Agile operating model in Azure Boards
 
@@ -51,7 +51,8 @@ Link every PR to a work item. Keep acceptance criteria testable. If a story cann
 |---|---|---|---|
 | 1 | Architecture and guardrails | Approved design, repo, board | Diagrams, CIDR plan, RBAC matrix, threat model, ADRs, GitHub, Azure Boards |
 | 2 | Foundation | Remote Terraform state + hub network + shared security | State in Blob with locking, hub applied, firewall/Bastion/DNS zones/Log Analytics, policy guardrail, budget |
-| 3 | Platform | Spokes + data + AKS + APIM + App Service + Functions + Ansible | Private endpoints resolve, AKS/APIM/App Service deployed, ACR pull works, Ansible idempotent |
+| 3A | Network and data | Spokes + private DNS + ACR + Key Vault + SQL + Storage + Service Bus + Redis | Six private endpoints approved, no public data access, routing validated |
+| 3B | Compute and edge | AKS + APIM + App Service + Functions + App Gateway + Ansible | Private AKS/APIM, APIM outbound integration, App Service/Functions endpoints, Ansible idempotent |
 | 4 | Application and CI | FastAPI + Entra auth + RBAC + build pipeline | Tests pass, image in ACR, SBOM/signature, build artifact traceable |
 | 5 | Release and operations | Release pipeline, dev deploy, prod approval gate, runbook | Dev endpoint works, prod stage blocked on approval, alerts/runbook, cost/cleanup |
 
@@ -61,18 +62,18 @@ Link every PR to a work item. Keep acceptance criteria testable. If a story cann
 Day 1 design
   -> Day 2 state backend
   -> Day 2 hub + DNS + firewall
-  -> Day 3 spokes + private endpoints
-  -> Day 3 AKS/APIM/App Service
+  -> Day 3A spokes + private endpoints + data
+  -> Day 3B AKS/APIM/App Service
   -> Day 4 app + build
   -> Day 5 release + verify
 ```
 
-If Day 2 slips, Day 3 slips. If private DNS slips, everything after it looks broken. Protect the critical path.
+If Day 2 slips, Day 3A slips. If private DNS slips, everything after it looks broken. Protect the critical path.
 
 ### 2.2 Work that can run in parallel
 
 - Day 2 evening: scaffold the FastAPI project and write tests that do not need Azure.
-- Day 3: write the build YAML while Terraform applies.
+- Day 3A/3B: write the build YAML while Terraform applies.
 - Day 4: write the release YAML skeleton and runbook while the build runs.
 - Any day: update ADRs and the README so the next day starts with context.
 
@@ -106,8 +107,8 @@ If you have only 3 hours, do the design sections and repo; move the Azure DevOps
 - Storage account: `stlogisticstfstate<unique>`, `Standard_GRS` or `ZRS`, TLS 1.2, public endpoint temporarily restricted to the deployer IP, shared key disabled, Entra-only auth.
 - Container: `tfstate`.
 - Enable versioning, soft delete (30 days in the lab, 90 in production), change feed, and an immutable policy if feasible.
-- Private endpoint in the management VNet; private DNS zone `privatelink.blob.core.windows.net` (Day 3).
-- Grant the deployer `Storage Blob Data Contributor` now; grant the release identity the same on Day 3/4.
+- Private endpoint in the management VNet; private DNS zone `privatelink.blob.core.windows.net` (Day 3B).
+- Grant the deployer `Storage Blob Data Contributor` now; grant the release identity the same on Day 3B/4.
 - Bootstrap with a small Terraform stack using local state, then migrate to the remote backend immediately. Document the chicken-and-egg step.
 
 ### 4.2 Build the hub
@@ -116,26 +117,26 @@ If you have only 3 hours, do the design sections and repo; move the Azure DevOps
 - Azure Firewall (Basic or Standard in lab, Premium in prod), policy, public IP, forced tunneling decision.
 - Azure Bastion.
 - VPN/ExpressRoute gateway (optional for the lab; Terraform module ready).
-- Private DNS zones linked to the hub (resolver and spoke links come on Day 3).
+- Private DNS zones linked to the hub (spoke links come on Day 3A; resolver on 3B).
 - Route tables and NSGs.
 - Log Analytics workspace, diagnostic settings, retention, daily cap.
 - Azure Policy guardrail: deny public IPs outside the approved edge/hub resource groups.
 - Budget and alerts.
 
-Day 2 does not create Key Vault, private endpoints, managed identities, AKS, or APIM. Those are Day 3. Do not let a Day 2 time overrun force insecure shortcuts on Day 3.
+Day 2 does not create Key Vault, private endpoints, managed identities, AKS, or APIM. Those are Day 3A/3B. Do not let a Day 2 time overrun force insecure shortcuts on Day 3.
 
 ### 4.3 Exit criteria
 
 - [ ] `terraform init` uses the remote backend; state lock works.
 - [ ] `terraform plan` is clean and reviewed; `terraform apply` succeeds.
-- [ ] State storage has no shared key; the temporary public IP allow-list is documented and will be removed on Day 3.
+- [ ] State storage has no shared key; the temporary public IP allow-list is documented and will be removed on Day 3B.
 - [ ] Hub firewall, Bastion, private DNS zones, and Log Analytics are deployed.
 - [ ] Policy assignment is visible in Azure Policy.
 - [ ] No secrets in the repo; the deployer can read/write state only through Entra ID.
 
 ---
 
-## 5. Day 3 - Platform (high-level)
+## 5. Day 3A and 3B - Platform (high-level)
 
 **Outcome:** All required Azure services exist, are private, and can talk to each other.
 
@@ -265,7 +266,7 @@ These are planning ranges, not quotes. Verify in the Azure Pricing Calculator fo
 | Azure SQL | Serverless USD 50-250 | GP zone-redundant USD 250-600 |
 | Managed Redis | B0/B1 USD 50-150 | B1/B3 USD 150-400 |
 | Storage | USD 10-50 | USD 50-200 |
-| Service Bus | Standard USD 10-50 | Premium USD 600+ |
+| Service Bus | Premium USD 600-800 (private endpoint requires Premium; Standard cannot use Private Link) | Premium USD 600+ |
 | Key Vault | USD 5-20 | USD 20-50 |
 | ACR | Premium USD 50 | Premium USD 50-100 |
 | Bastion | Developer/Standard USD 0-200 | Standard USD 140-200 |

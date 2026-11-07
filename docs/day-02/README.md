@@ -600,4 +600,4 @@ Reply with exactly:
 EOD
 ```
 
-Day 3 will build the spokes, AKS, App Service, APIM, SQL, Redis, Blob, Service Bus, Functions, ACR, and the Ansible baseline. Do not start those today.
+Day 3A will build the spokes, private DNS links, ACR, Key Vault, SQL, Blob, Service Bus, and Managed Redis. Day 3B will build AKS, APIM, App Service, Functions, App Gateway, and the Ansible baseline. Do not start those today.

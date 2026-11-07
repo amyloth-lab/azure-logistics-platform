@@ -6,9 +6,9 @@ The business capability is deliberately small: **inventory** and **orders** APIs
 
 The engineering capability is deliberately realistic: hub-and-spoke networking, private endpoints, WAF, API Management, AKS, App Service, Azure Functions, Service Bus, Azure SQL, Azure Managed Redis, Blob Storage, Key Vault, Terraform, Ansible, policy, observability, and a software supply-chain gate.
 
-> **Current checkpoint: Day 3A of 5.**
-> Start with [docs/day-03/README.md](docs/day-03/README.md). It builds the spoke network, private DNS, ACR, Key Vault, and data services.
-> Do not start AKS, APIM, App Service, Functions, or the application until Day 3B.
+> **Current checkpoint: Day 3B - checkpoint 1 (AKS).**
+> Read [PROJECT-STATE.md](docs/PROJECT-STATE.md) first, then [Day 3B](docs/day-03b/README.md).
+> Day 3A is complete. Do not jump ahead to APIM or App Gateway before AKS is validated.
 >
 > **Project memory:** [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md). Read this first to avoid re-loading old context. Update it at every EOD.
 
@@ -111,6 +111,8 @@ python diagrams/render_diagrams.py
 │   │   └── README.md            # Terraform state + secure hub
 │   ├── day-03/
 │   │   └── README.md            # Spokes, private DNS, ACR, Key Vault, data
+│   ├── day-03b/
+│   │   └── README.md            # AKS, APIM, App Service, Functions, edge, Ansible
 │   └── adr/                     # Architecture Decision Records
 ├── infra/
 │   ├── ansible/                 # configuration management (Day 3+)
@@ -165,11 +167,10 @@ A cost-controlled lab profile is documented in [docs/day-01/plan-of-action.md](d
 
 ## Start here
 
-1. **Day 3A:** open [docs/day-03/README.md](docs/day-03/README.md). Follow the steps in order.
-2. **Background:** [docs/day-01/README.md](docs/day-01/README.md), [docs/day-02/README.md](docs/day-02/README.md), and the [glossary](docs/day-01/glossary.md).
-3. Block 4-5 hours for Day 3A. Do not jump ahead to AKS or APIM.
-4. Capture the evidence listed in the Day 3A end-of-day checklist.
-5. Commit, tag `day-3a`, and push your work.
-6. Reply **`EOD`** in the chat. Day 3B will be released only after that.
+1. **Day 3B:** read [PROJECT-STATE.md](docs/PROJECT-STATE.md), then [Day 3B](docs/day-03b/README.md).
+2. **Completed:** [Day 1](docs/day-01/README.md), [Day 2](docs/day-02/README.md), [Day 3A](docs/day-03/README.md).
+3. Start with Day 3B checkpoint 1: AKS. Validate it before APIM.
+4. Commit and tag each checkpoint.
+5. Reply **`EOD`** after the full Day 3B, or ask for the next checkpoint.
 
 If you get stuck, use the Copilot prompts in the guide. Do not skip the network and RBAC decisions to "save time"; those decisions are the project.

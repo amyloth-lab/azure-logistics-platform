@@ -34,7 +34,7 @@ Order and inventory changes must trigger asynchronous work (audit, notifications
 - The relay adds a component to operate and monitor.
 - Outbox table growth needs cleanup/archival.
 - Exactly-once delivery is not guaranteed; consumers must be idempotent.
-- Service Bus Premium is expensive in production (Standard is acceptable for the lab).
+- **Service Bus Premium is required for private endpoints.** Standard supports service endpoints/IP firewall but not Private Link. The design keeps Premium to preserve the private data plane; if cost forces Standard, record a deviation that replaces the private endpoint with a service-endpoint + firewall rule set.
 - Event schema evolution needs versioning discipline.
 
 ## Alternatives considered
