@@ -24,6 +24,7 @@ LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 REQUIRED = [
     "README.md",
+    "docs/PROJECT-STATE.md",
     "docs/day-01/README.md",
     "docs/day-01/DO-THIS-FIRST.md",
     "docs/day-01/network-design.md",
@@ -33,6 +34,7 @@ REQUIRED = [
     "docs/day-01/glossary.md",
     "docs/day-01/azure-boards-import.csv",
     "docs/day-02/README.md",
+    "docs/day-03/README.md",
     "infra/terraform/bootstrap/main.tf",
     "infra/terraform/envs/dev/main.tf",
     "docs/adr/README.md",

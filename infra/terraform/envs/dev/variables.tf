@@ -38,6 +38,12 @@ variable "firewall_threat_intelligence_mode" {
   }
 }
 
+variable "sql_admin_login" {
+  description = "Login name recorded for the Entra SQL administrator. Use your UPN if Azure rejects the default."
+  type        = string
+  default     = "logistics-sql-admin"
+}
+
 variable "log_retention_days" {
   description = "Log Analytics retention."
   type        = number
@@ -53,7 +59,7 @@ variable "log_daily_quota_gb" {
 variable "budget_amount_usd" {
   description = "Monthly subscription budget in USD. Set 0 to disable."
   type        = number
-  default     = 200
+  default     = 150
 }
 
 variable "budget_contact_emails" {

@@ -6,9 +6,11 @@ The business capability is deliberately small: **inventory** and **orders** APIs
 
 The engineering capability is deliberately realistic: hub-and-spoke networking, private endpoints, WAF, API Management, AKS, App Service, Azure Functions, Service Bus, Azure SQL, Azure Managed Redis, Blob Storage, Key Vault, Terraform, Ansible, policy, observability, and a software supply-chain gate.
 
-> **Current checkpoint: Day 2 of 5.**
-> Start with [docs/day-02/README.md](docs/day-02/README.md). It bootstraps Terraform state and deploys the secure hub.
-> Do not start AKS, APIM, SQL, Redis, or the application until Day 3.
+> **Current checkpoint: Day 3A of 5.**
+> Start with [docs/day-03/README.md](docs/day-03/README.md). It builds the spoke network, private DNS, ACR, Key Vault, and data services.
+> Do not start AKS, APIM, App Service, Functions, or the application until Day 3B.
+>
+> **Project memory:** [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md). Read this first to avoid re-loading old context. Update it at every EOD.
 
 ---
 
@@ -95,6 +97,7 @@ python diagrams/render_diagrams.py
 │   ├── network-topology.png
 │   └── render_diagrams.py
 ├── docs/
+│   ├── PROJECT-STATE.md         # canonical compact memory; read first
 │   ├── day-01/
 │   │   ├── DO-THIS-FIRST.md     # minimum path if overwhelmed
 │   │   ├── README.md            # full Day 1 workbook
@@ -106,6 +109,8 @@ python diagrams/render_diagrams.py
 │   │   └── azure-boards-import.csv
 │   ├── day-02/
 │   │   └── README.md            # Terraform state + secure hub
+│   ├── day-03/
+│   │   └── README.md            # Spokes, private DNS, ACR, Key Vault, data
 │   └── adr/                     # Architecture Decision Records
 ├── infra/
 │   ├── ansible/                 # configuration management (Day 3+)
@@ -125,11 +130,12 @@ python diagrams/render_diagrams.py
 |---|---|---|
 | **1** | Architecture, network, identity/RBAC, zero-trust threat model, delivery plan, repo and board | Diagrams, CIDR plan, RBAC matrix, ADRs, GitHub repo, Azure Boards backlog |
 | **2** | Bootstrap Terraform state and build the secure hub: Firewall, Bastion, DNS, Log Analytics, policy, budget | Remote state in Blob, hub `terraform plan/apply`, policy assignment |
-| **3** | Build spokes and platform services: AKS, App Service, APIM, SQL, Redis, Storage, Service Bus, Functions, ACR, Ansible baseline | Private endpoints, DNS resolution tests, AKS/APIM/App Service deployed, Ansible idempotence |
+| **3A** | Build spokes, private DNS links, ACR, Key Vault, SQL, Storage, Service Bus, Managed Redis | Six private endpoints, no public data access, network and data validation |
+| **3B** | Build AKS, APIM, App Service, Functions, App Gateway, and the Ansible baseline | Private AKS/APIM, APIM outbound integration, App Service/Functions endpoints, Ansible idempotence |
 | **4** | Build the FastAPI app, Entra auth, RBAC, tests, and the **build** pipeline | Green build, unit/integration tests, SAST/dependency/image scans, SBOM, signed image in ACR |
 | **5** | Build the **release** pipeline, deploy to dev, gate prod, verify, document, and clean up | Dev deployment, approval-gated prod stage, smoke/DAST results, runbook, cost/cleanup record |
 
-Day 1 is deliberately design-heavy. Day 2 is deliberately foundation-heavy. You cannot safely automate a network and identity model you have not decided yet.
+Day 1 is deliberately design-heavy. Day 2 is deliberately foundation-heavy. Day 3 is split because network, data, and compute cannot all be built safely in one 4-5 hour sitting. You cannot safely automate a network and identity model you have not decided yet.
 
 ---
 
@@ -159,11 +165,11 @@ A cost-controlled lab profile is documented in [docs/day-01/plan-of-action.md](d
 
 ## Start here
 
-1. **Day 2:** open [docs/day-02/README.md](docs/day-02/README.md). Follow the steps in order.
-2. **Day 1 reference:** [docs/day-01/README.md](docs/day-01/README.md) and the [glossary](docs/day-01/glossary.md).
-3. Block 4-5 hours for Day 2. Do not jump ahead to AKS or APIM.
-4. Capture the evidence listed in the Day 2 end-of-day checklist.
-5. Commit, tag `day-2`, and push your work.
-6. Reply **`EOD`** in the chat. Day 3 will be released only after that.
+1. **Day 3A:** open [docs/day-03/README.md](docs/day-03/README.md). Follow the steps in order.
+2. **Background:** [docs/day-01/README.md](docs/day-01/README.md), [docs/day-02/README.md](docs/day-02/README.md), and the [glossary](docs/day-01/glossary.md).
+3. Block 4-5 hours for Day 3A. Do not jump ahead to AKS or APIM.
+4. Capture the evidence listed in the Day 3A end-of-day checklist.
+5. Commit, tag `day-3a`, and push your work.
+6. Reply **`EOD`** in the chat. Day 3B will be released only after that.
 
 If you get stuck, use the Copilot prompts in the guide. Do not skip the network and RBAC decisions to "save time"; those decisions are the project.
