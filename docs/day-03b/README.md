@@ -1,6 +1,6 @@
 # Day 3B - Compute and Edge Checkpoints
 
-**Status:** Not started
+**Status:** Checkpoint 1 code added; AKS apply pending.
 **Purpose:** Build the remaining platform services without turning one day into an unsafe mega-apply.
 **Rule:** Do one checkpoint, validate it, then ask for the next. Do not apply all three at once.
 
@@ -27,72 +27,120 @@ A single apply makes it hard to tell which component broke. Build one layer, val
 
 **Goal:** A private AKS cluster with system and user node pools, Azure CNI Overlay, workload identity, OIDC issuer, Entra RBAC, internal ingress capability, and ACR pull.
 
-### Design decision to settle first
+### Decision: use the existing private DNS zone
 
-You already created a `privatelink.australiaeast.azmk8s.io` zone in the platform resource group. AKS private cluster can either:
+Chosen: **existing zone**, not `System`.
 
-- use `private_dns_zone_id = "System"` and create its own zone in the node resource group, or
-- use your existing zone and give the cluster identity `Private DNS Zone Contributor`.
+The implementation creates a user-assigned identity for AKS and grants it:
 
-Do not create both and assume DNS will resolve correctly. Recommended for this project:
+- `Private DNS Zone Contributor` on `privatelink.australiaeast.azmk8s.io`
+- `Network Contributor` on `vnet-workload-dev`
 
-- Use the existing zone for consistency with the other private DNS zones.
-- Create a user-assigned identity for AKS before the cluster.
-- Grant that identity `Private DNS Zone Contributor` on the AKS zone and `Network Contributor` on the workload VNet if required.
-- Pass the existing zone ID to AKS.
+The cluster receives the existing zone ID.
 
-If that becomes too complex, use `System` DNS and remove the unused custom AKS zone in a separate change. Record the decision in an ADR.
+### Code already added
 
-### Module to add
+- `infra/terraform/modules/aks/` - cluster, node pool, identity, role assignments, AcrPull.
+- `infra/terraform/envs/dev/main.tf` - `module "aks"` wiring.
+- Firewall rule collection group `aks-egress` for AKS egress to MCR, AKS FQDN tag, Entra, Ubuntu, and NTP.
+- No new subnet, no public IP on nodes.
 
-`infra/terraform/modules/aks/`
+The configuration passed `terraform validate` in a clean copy without the remote backend.
 
-Inputs:
-
-- cluster name, resource group, location, DNS prefix.
-- system and user subnet IDs.
-- ACR ID.
-- Log Analytics workspace ID.
-- tenant ID.
-- private DNS zone ID.
-- tags.
-
-Resources:
-
-- `azurerm_kubernetes_cluster`:
-  - private cluster, no public FQDN.
-  - system-assigned or user-assigned identity.
-  - Entra RBAC; local accounts disabled.
-  - OIDC issuer and workload identity enabled.
-  - Azure CNI Overlay: pod CIDR `100.64.0.0/16`, service CIDR `10.60.0.0/16`, DNS `10.60.0.10`.
-  - outbound type `userDefinedRouting`.
-  - system node pool in `snet-aks-system`.
-- `azurerm_kubernetes_cluster_node_pool` user pool in `snet-aks-user`.
-- `AcrPull` role assignment for the kubelet identity on the ACR.
-- Optional: `oms_agent` to the Log Analytics workspace.
-
-### Validate
+### Apply
 
 ```powershell
-az aks show -g rg-logistics-workload-dev -n aks-logistics-dev `
-  --query "{private:apiServerAccessProfile.enablePrivateCluster,oidc:oidcIssuerProfile.enabled,workloadIdentity:securityProfile.workloadIdentity.enabled}" -o table
+cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
 
-az aks get-credentials -g rg-logistics-workload-dev -n aks-logistics-dev --overwrite-existing
-kubectl get nodes -o wide
-kubectl get pods -A
+Remove-Item aks.tfplan -ErrorAction SilentlyContinue
+terraform init -backend-config=backend.hcl
+terraform fmt -check -recursive ..\..
+terraform validate
+terraform plan -out=aks.tfplan
+terraform apply aks.tfplan
 ```
 
-Acceptance:
+The AKS cluster can take 15–25 minutes. Stop if the plan shows a replacement of the hub, firewall, ACR, Key Vault, or data services.
+
+### Validate without a public API server
+
+`az aks get-credentials` from your laptop will write a private FQDN that your laptop cannot reach. Use AKS run command instead:
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --command "kubectl get nodes -o wide"
+```
+
+Expected: two nodes, `Ready` — one system, one user.
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --command "kubectl get pods -A"
+```
+
+Check the cluster shape:
+
+```powershell
+az aks show `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --query "{private:apiServerAccessProfile.enablePrivateCluster,oidc:oidcIssuerProfile.enabled,workloadIdentity:securityProfile.workloadIdentity.enabled,nodePools:agentPoolProfiles[].name}" `
+  --output json
+```
+
+Expected: private `true`, OIDC `true`, workload identity `true`, node pools `system` and `user`.
+
+### If `kubectl` returns `Forbidden: nodes is forbidden`
+
+Entra authentication succeeded, but the user has no Kubernetes RBAC role. The environment now includes:
+
+```hcl
+resource "azurerm_role_assignment" "aks_cluster_admin" {
+  scope                = module.aks.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+```
+
+Apply it:
+
+```powershell
+terraform plan -out=aks-rbac.tfplan
+terraform apply aks-rbac.tfplan
+```
+
+Wait 2–5 minutes for the role assignment to propagate, then retry:
+
+```powershell
+az aks command invoke -g rg-logistics-workload-dev -n aks-logistics-dev --command "kubectl get nodes -o wide"
+```
+
+This is a **lab convenience** role. In production, assign it to a group with a manual JIT process, not to every engineer permanently.
+
+### Acceptance
 
 - [ ] Cluster is private.
 - [ ] Both node pools Ready.
 - [ ] OIDC issuer enabled.
 - [ ] Workload identity enabled.
-- [ ] `kubectl` works from the management VNet or Bastion-connected VM.
 - [ ] ACR pull works for a test pod.
 - [ ] No public IP on nodes.
+- [ ] `az aks command invoke` works, or a management VM/Bastion path is ready.
 
-Stop after checkpoint 1 and report the result.
+Commit and tag:
+
+```powershell
+git add infra\terraform docs\day-03b docs\PROJECT-STATE.md
+git commit -m "feat(day-3b): add private AKS cluster"
+git tag -a day-3b-aks -m "Day 3B checkpoint 1: private AKS"
+git push origin main --tags
+```
+
+Stop after checkpoint 1 and report the result. Do not start APIM yet.
 
 ---
 

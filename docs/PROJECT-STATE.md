@@ -239,6 +239,7 @@ Private services:
 | `AzureFirewallThreatIntelLog` unsupported | Basic SKU limitation | Include category only when `sku_tier != "Basic"`. |
 | Basic firewall missing management IP | Basic always has a management NIC | Add management subnet ID, management public IP, `management_ip_configuration`. |
 | Service Bus private endpoint 400 | Standard SKU does not support Private Link | Use Premium, or documented service-endpoint fallback. |
+| AKS `Forbidden: nodes is forbidden` | Entra auth works, but no Kubernetes RBAC role | Assign `Azure Kubernetes Service RBAC Cluster Admin` to the current user at the AKS scope; wait for propagation. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -246,24 +247,49 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B - not started.**
+Current checkpoint: **Day 3B checkpoint 1 - AKS code added, apply pending.**
 
 Immediate next actions:
 
 1. Commit the pending documentation/state updates.
-2. Start Day 3B checkpoint 1: AKS private cluster.
+2. Plan/apply AKS.
+3. Validate with `az aks command invoke`.
 
 ```powershell
 cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
 git add docs infra\terraform scripts\validate_repo.py
-git commit -m "docs: record day 3a completion and project state"
+git commit -m "docs: record day 3a completion and day 3b AKS checkpoint"
 git push origin main
+```
+
+AKS implementation:
+
+- `infra/terraform/modules/aks/` - private cluster, system/user pools, UAI, existing private DNS zone, AcrPull.
+- `infra/terraform/envs/dev/main.tf` - `module "aks"`, `aks-egress` firewall rule collection group, and `Azure Kubernetes Service RBAC Cluster Admin` for the current user.
+- Chosen DNS: existing `privatelink.australiaeast.azmk8s.io`, with `Private DNS Zone Contributor` + `Network Contributor`.
+- `terraform validate` passes; AKS is applied, but the cluster-admin role assignment is pending apply. The current `Forbidden: nodes` error is the missing Kubernetes RBAC role.
+
+Apply:
+
+```powershell
+cd infra\terraform\envs\dev
+Remove-Item aks.tfplan -ErrorAction SilentlyContinue
+terraform init -backend-config=backend.hcl
+terraform validate
+terraform plan -out=aks.tfplan
+terraform apply aks.tfplan
+```
+
+Validate:
+
+```powershell
+az aks command invoke -g rg-logistics-workload-dev -n aks-logistics-dev --command "kubectl get nodes -o wide"
 ```
 
 Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
 
 1. **3B-1 - AKS:** private cluster, system/user node pools, Azure CNI Overlay, workload identity, OIDC issuer, internal ingress, ACR pull, Entra RBAC. Validate nodes and private API.
-   - **Open design decision:** use the existing `privatelink.australiaeast.azmk8s.io` zone with a user-assigned identity + `Private DNS Zone Contributor`, or use `private_dns_zone_id = "System"` and remove/deconflict the custom zone. Decide before creating the cluster.
+   - **Decided:** use the existing `privatelink.australiaeast.azmk8s.io` zone with a user-assigned identity + `Private DNS Zone Contributor` and `Network Contributor`. Code is added; apply pending.
 2. **3B-2 - APIM:** Standard v2, inbound private endpoint, outbound VNet integration, backend/health policy. Validate private access and 401/403 behavior.
 3. **3B-3 - Edge/PaaS/Ansible:** App Service, Functions, App Gateway WAF_v2, Ansible control/agent VMs, Kubernetes baseline.
 

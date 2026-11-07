@@ -33,3 +33,19 @@ output "private_dns_zone_ids" {
 output "policy_assignment_id" {
   value = module.policy.policy_assignment_id
 }
+
+output "aks_name" {
+  value = module.aks.name
+}
+
+output "aks_id" {
+  value = module.aks.id
+}
+
+output "aks_private_fqdn" {
+  value = module.aks.private_fqdn
+}
+
+output "aks_oidc_issuer_url" {
+  value = module.aks.oidc_issuer_url
+}

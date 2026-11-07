@@ -115,6 +115,84 @@ module "data" {
   tags                             = var.tags
 }
 
+resource "azurerm_firewall_policy_rule_collection_group" "aks_egress" {
+  name               = "aks-egress"
+  firewall_policy_id = module.firewall.firewall_policy_id
+  priority           = 200
+
+  application_rule_collection {
+    name     = "aks-required"
+    priority = 200
+    action   = "Allow"
+
+    rule {
+      name                  = "aks-service-tag"
+      source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
+      destination_fqdn_tags = ["AzureKubernetesService"]
+
+      protocols {
+        type = "Https"
+        port = 443
+      }
+    }
+
+    rule {
+      name                  = "mcr-tag"
+      source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
+      destination_fqdn_tags = ["MicrosoftContainerRegistry"]
+
+      protocols {
+        type = "Https"
+        port = 443
+      }
+    }
+
+    rule {
+      name                  = "aad-tag"
+      source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
+      destination_fqdn_tags = ["AzureActiveDirectory"]
+
+      protocols {
+        type = "Https"
+        port = 443
+      }
+    }
+
+    rule {
+      name             = "aks-extra-fqdns"
+      source_addresses = ["10.2.0.0/16", "10.4.0.0/16"]
+
+      protocols {
+        type = "Https"
+        port = 443
+      }
+
+      destination_fqdns = [
+        "management.azure.com",
+        "login.microsoftonline.com",
+        "packages.microsoft.com",
+        "acs-mirror.azureedge.net",
+        "azure.archive.ubuntu.com",
+        "security.ubuntu.com"
+      ]
+    }
+  }
+
+  network_rule_collection {
+    name     = "aks-ntp"
+    priority = 300
+    action   = "Allow"
+
+    rule {
+      name                  = "ntp"
+      source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
+      destination_addresses = ["*"]
+      destination_ports     = ["123"]
+      protocols             = ["UDP"]
+    }
+  }
+}
+
 module "network_spokes" {
   source = "../../modules/network-spokes"
 
@@ -136,6 +214,33 @@ module "acr" {
   private_endpoint_subnet_id = module.network_spokes.management_private_endpoints_subnet_id
   private_dns_zone_id        = module.private_dns.zone_ids["privatelink.azurecr.io"]
   tags                       = var.tags
+}
+
+module "aks" {
+  source = "../../modules/aks"
+
+  name                       = "aks-logistics-${var.environment}"
+  resource_group_name        = azurerm_resource_group.workload.name
+  location                   = var.location
+  environment                = var.environment
+  dns_prefix                 = "aks-logistics-${var.environment}"
+  system_subnet_id           = module.network_spokes.aks_system_subnet_id
+  user_subnet_id             = module.network_spokes.aks_user_subnet_id
+  workload_vnet_id           = module.network_spokes.workload_vnet_id
+  acr_id                     = module.acr.id
+  log_analytics_workspace_id = module.observability.workspace_id
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  private_dns_zone_id        = module.private_dns.zone_ids["privatelink.australiaeast.azmk8s.io"]
+  tags                       = var.tags
+}
+
+# Lab convenience: the human running Terraform needs Kubernetes RBAC to use
+# az aks command invoke / kubectl. In production, assign this to a group and
+# use a manual JIT process; do not grant it to every engineer permanently.
+resource "azurerm_role_assignment" "aks_cluster_admin" {
+  scope                = module.aks.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = data.azurerm_client_config.current.object_id
 }
 
 module "keyvault" {
