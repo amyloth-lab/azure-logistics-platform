@@ -1,6 +1,6 @@
 # Project State - Azure Logistics Platform
 
-**Last updated:** 2026-11-07 (end of Day 3A)
+**Last updated:** 2026-11-08 (AKS checkpoint complete)
 **Purpose:** Canonical, compact project memory. Read this first instead of re-reading Day 1/Day 2 documents.
 **Rule:** Update this file at the end of every day. Keep it under ~250 lines. Do not put real subscription IDs, tenant IDs, emails, secrets, or storage keys in it.
 
@@ -240,6 +240,9 @@ Private services:
 | Basic firewall missing management IP | Basic always has a management NIC | Add management subnet ID, management public IP, `management_ip_configuration`. |
 | Service Bus private endpoint 400 | Standard SKU does not support Private Link | Use Premium, or documented service-endpoint fallback. |
 | AKS `Forbidden: nodes is forbidden` | Entra auth works, but no Kubernetes RBAC role | Assign `Azure Kubernetes Service RBAC Cluster Admin` to the current user at the AKS scope; wait for propagation. |
+| APIM private endpoint group ID error | APIM Private Link group ID is case-sensitive | Use `subresource_names = ["Gateway"]`, not `gateway`. |
+| APIM Standard v2 provider gap | `azurerm_api_management` lacks v2 outbound/public-disable support | Use `azapi_update_resource` after the private endpoint; do not use classic `virtual_network_configuration`. |
+| APIM `virtualNetworkType` cannot be `none` | A subnet config requires a type; Standard v2 uses external integration | Set `virtualNetworkType = "External"` for Standard v2. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -247,27 +250,25 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B checkpoint 1 - AKS code added, apply pending.**
+Current checkpoint: **Day 3B checkpoint 2 - APIM Standard v2.**
 
-Immediate next actions:
+AKS checkpoint is complete:
 
-1. Commit the pending documentation/state updates.
-2. Plan/apply AKS.
-3. Validate with `az aks command invoke`.
+- Private cluster applied.
+- System + user node pools Ready.
+- Existing `privatelink.australiaeast.azmk8s.io` zone with UAI, `Private DNS Zone Contributor`, `Network Contributor`.
+- `Azure Kubernetes Service RBAC Cluster Admin` applied; `kubectl get nodes` works through `az aks command invoke`.
+- Firewall `aks-egress` rule collection group applied.
+- Do not change AKS unless a specific error requires it.
 
-```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
-git add docs infra\terraform scripts\validate_repo.py
-git commit -m "docs: record day 3a completion and day 3b AKS checkpoint"
-git push origin main
-```
+**APIM status:** code added, apply pending.
 
-AKS implementation:
-
-- `infra/terraform/modules/aks/` - private cluster, system/user pools, UAI, existing private DNS zone, AcrPull.
-- `infra/terraform/envs/dev/main.tf` - `module "aks"`, `aks-egress` firewall rule collection group, and `Azure Kubernetes Service RBAC Cluster Admin` for the current user.
-- Chosen DNS: existing `privatelink.australiaeast.azmk8s.io`, with `Private DNS Zone Contributor` + `Network Contributor`.
-- `terraform validate` passes; AKS is applied, but the cluster-admin role assignment is pending apply. The current `Forbidden: nodes` error is the missing Kubernetes RBAC role.
+- `infra/terraform/modules/apim/` - StandardV2_1, system-assigned identity, inbound private endpoint, `Gateway` group ID, private DNS, and `azapi_update_resource` for outbound integration + public access disable.
+- Env wiring and outputs added.
+- `terraform validate` passes; not applied.
+- Private Link group ID is **`Gateway`** (capital G).
+- `azurerm_api_management` does not expose Standard v2 outbound integration/public access disable; `azapi` is used deliberately.
+- APIM apply can take 30–60 minutes.
 
 Apply:
 

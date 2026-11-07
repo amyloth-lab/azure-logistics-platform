@@ -243,6 +243,21 @@ resource "azurerm_role_assignment" "aks_cluster_admin" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+module "apim" {
+  source = "../../modules/apim"
+
+  name                       = "apim-logistics-${var.environment}-${random_string.suffix.result}"
+  resource_group_name        = azurerm_resource_group.platform.name
+  location                   = var.location
+  environment                = var.environment
+  publisher_name             = var.apim_publisher_name
+  publisher_email            = var.apim_publisher_email
+  private_endpoint_subnet_id = module.network_spokes.workload_private_endpoints_subnet_id
+  outbound_subnet_id         = module.network_spokes.apim_outbound_subnet_id
+  private_dns_zone_id        = module.private_dns.zone_ids["privatelink.azure-api.net"]
+  tags                       = var.tags
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

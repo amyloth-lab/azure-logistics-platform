@@ -49,3 +49,15 @@ output "aks_private_fqdn" {
 output "aks_oidc_issuer_url" {
   value = module.aks.oidc_issuer_url
 }
+
+output "apim_id" {
+  value = module.apim.id
+}
+
+output "apim_gateway_url" {
+  value = module.apim.gateway_url
+}
+
+output "apim_private_ip" {
+  value = module.apim.private_ip
+}

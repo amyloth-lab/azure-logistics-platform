@@ -38,6 +38,18 @@ variable "firewall_threat_intelligence_mode" {
   }
 }
 
+variable "apim_publisher_name" {
+  description = "APIM publisher name."
+  type        = string
+  default     = "Logistics Platform"
+}
+
+variable "apim_publisher_email" {
+  description = "APIM publisher email. Must be a valid email format."
+  type        = string
+  default     = "whrsoft@gmail.com"
+}
+
 variable "sql_admin_login" {
   description = "Login name recorded for the Entra SQL administrator. Use your UPN if Azure rejects the default."
   type        = string

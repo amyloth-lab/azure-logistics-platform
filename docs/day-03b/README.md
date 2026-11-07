@@ -148,23 +148,80 @@ Stop after checkpoint 1 and report the result. Do not start APIM yet.
 
 **Goal:** Private APIM gateway with outbound integration to the workload VNet.
 
-### Resources
+### Code added
 
-- APIM Standard v2.
-- Inbound private endpoint in `snet-private-endpoints`.
-- Outbound VNet integration in `snet-apim-outbound` (already delegated to `Microsoft.Web/serverFarms`).
-- Public network access disabled after the private endpoint is approved.
-- System-assigned managed identity.
-- JWT validation policy placeholder.
-- Backend to the AKS internal ingress once NGINX is installed.
+- `infra/terraform/modules/apim/`
+- APIM Standard v2 (`StandardV2_1`), system-assigned identity.
+- Inbound private endpoint in the workload private endpoint subnet.
+- Private Link group ID **`Gateway`** (capital G; lowercase fails).
+- Private DNS zone `privatelink.azure-api.net`.
+- `azapi_update_resource` to set:
+  - `publicNetworkAccess = "Disabled"`
+  - `virtualNetworkConfiguration.subnetResourceId = snet-apim-outbound`
+  - `virtualNetworkType = "External"` (Standard v2 outbound integration; `None` is rejected when a subnet is supplied, and `Internal` is not supported on v2)
+- Env wiring and outputs.
+
+This uses `azapi` because the current `azurerm_api_management` resource does not expose the Standard v2 outbound integration or the gateway public-access switch. The classic `virtual_network_configuration` block is deprecated and is not the v2 outbound integration.
+
+`terraform validate` passes. It has not been applied.
+
+### Apply
+
+```powershell
+cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+
+Remove-Item apim.tfplan -ErrorAction SilentlyContinue
+terraform init -backend-config=backend.hcl
+terraform validate
+terraform plan -out=apim.tfplan
+terraform apply apim.tfplan
+```
+
+APIM Standard v2 can take 30–60 minutes.
+
+Stop if the plan shows a replacement of AKS, the hub, firewall, ACR, Key Vault, or data services.
+
+### If the `azapi_update_resource` fails
+
+The possible failure points are:
+
+1. **Private endpoint not approved yet** — approve the APIM private endpoint connection, then re-apply.
+2. **`virtualNetworkType = "None"` rejected with `cannot be 'none' when 'virtualNetworkConfiguration' is not null`** — use `virtualNetworkType = "External"` for Standard v2 outbound integration. `Internal` is not supported on Standard v2.
+3. **API version mismatch** — keep `Microsoft.ApiManagement/service@2024-05-01`; do not guess a preview version.
+
+Do not switch to classic VNet injection or enable public access to work around it.
 
 ### Validate
 
-- Private endpoint approved.
-- APIM default gateway resolves to the private IP from the workload VNet.
-- `curl` from a pod/VM reaches APIM.
-- No public APIM access.
-- APIM can reach the AKS internal ingress over the private path.
+```powershell
+az apim show `
+  --resource-group rg-logistics-platform-dev `
+  --name <apim-name> `
+  --query "{sku:sku.name,public:publicNetworkAccess,gateway:gatewayUrl,identity:identity.principalId}" `
+  --output json
+```
+
+Check the private endpoint:
+
+```powershell
+az network private-endpoint list `
+  --resource-group rg-logistics-platform-dev `
+  --query "[?contains(name, 'apim')].{name:name,state:privateLinkServiceConnections[0].privateLinkServiceConnectionState.status,ip:customDnsConfigs[0].ipAddresses[0]}" `
+  --output table
+```
+
+Expect `Approved` and a `10.2.11.x` private IP.
+
+Check private DNS:
+
+```powershell
+az network private-dns record-set a list `
+  --resource-group rg-logistics-platform-dev `
+  --zone-name privatelink.azure-api.net `
+  --output table
+```
+
+APIM cannot reach AKS until the internal ingress controller and API are deployed on Day 4. This checkpoint validates the gateway, private endpoint, public-access disable, and outbound integration configuration only.
 
 Stop after checkpoint 2.
 
