@@ -2,6 +2,7 @@ prefix                      = "logistics"
 environment                 = "dev"
 location                    = "australiaeast"
 sql_admin_login             = "logistics-sql-admin"
+enable_ansible_vm           = false # set true only after Total Regional Cores quota is available
 enable_app_gateway          = false # set true only after public IP quota is available
 app_gateway_hostname        = "api.logistics.example.com"
 app_gateway_cert_path       = "cert.pfx"

@@ -52,6 +52,7 @@ kubeconfig.*
 # Secrets and certificates
 *.pfx
 *.p12
+infra/terraform/envs/dev/ansible_key*
 *.pem
 *.key
 *.crt

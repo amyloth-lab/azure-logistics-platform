@@ -305,6 +305,18 @@ module "app_gateway" {
   tags                     = var.tags
 }
 
+module "ansible" {
+  count  = var.enable_ansible_vm ? 1 : 0
+  source = "../../modules/ansible-vm"
+
+  name                = "vm-ansible-${var.environment}-${random_string.suffix.result}"
+  resource_group_name = azurerm_resource_group.management.name
+  location            = var.location
+  subnet_id           = module.network_spokes.ansible_subnet_id
+  ssh_public_key      = file("../../../../ansible/ansible_key.pub")
+  tags                = var.tags
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

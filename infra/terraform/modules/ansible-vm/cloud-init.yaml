@@ -1,0 +1,26 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+
+packages:
+  - ansible
+  - git
+  - python3-pip
+  - jq
+  - unzip
+  - ca-certificates
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-logistics-hardening.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      X11Forwarding no
+
+runcmd:
+  - systemctl restart ssh
+  - mkdir -p /opt/logistics/ansible
+  - ansible --version > /opt/logistics/ansible/ansible-version.txt

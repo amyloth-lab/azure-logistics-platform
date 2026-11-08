@@ -85,3 +85,11 @@ output "app_gateway_public_ip" {
 output "app_gateway_hostname" {
   value = var.enable_app_gateway ? module.app_gateway[0].hostname : null
 }
+
+output "ansible_vm_id" {
+  value = var.enable_ansible_vm ? module.ansible[0].id : null
+}
+
+output "ansible_private_ip" {
+  value = var.enable_ansible_vm ? module.ansible[0].private_ip : null
+}

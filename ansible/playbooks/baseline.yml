@@ -1,0 +1,49 @@
+---
+- name: Baseline the Ansible control host
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - ansible
+          - git
+          - python3-pip
+          - jq
+          - unzip
+          - ca-certificates
+        state: present
+
+    - name: Harden SSH
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-logistics-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          X11Forwarding no
+      notify: Restart ssh
+
+    - name: Create the platform working directory
+      ansible.builtin.file:
+        path: /opt/logistics/ansible
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted

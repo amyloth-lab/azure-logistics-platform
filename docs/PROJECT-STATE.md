@@ -250,6 +250,8 @@ Private services:
 | Flex Function `SubnetMissingRequiredDelegation` | Flex requires `Microsoft.App/environments`, not `Microsoft.Web/serverFarms` | Change `snet-functions-outbound` delegation to `Microsoft.App/environments`; apply subnet update, then Function App. |
 | App Gateway `filebase64` cannot find `cert.pfx` | Certificate generated in repo root, but Terraform runs from `envs/dev` | Copy the PFX into `infra/terraform/envs/dev` or run `terraform` from the directory containing the PFX. |
 | App Gateway `PublicIPCountLimitReached` | Subscription public IP quota is 3 and all three are used | Request a public IP quota increase in `australiaeast` (to at least 4), or remove a public IP safely; do not delete firewall/Bastion IPs. |
+| Terraform init `az.sess` / `commands` PermissionError | Azure CLI cannot write its session/log directory | `icacls "$env:USERPROFILE\.azure" /grant "$($env:USERNAME):(OI)(CI)F" /T`, then `az login`. |
+| Ansible VM `Total Regional Cores` 4/4 | No free vCPU quota in `australiaeast` | Deferred per ADR-0014; if quota is later available, request 6–8 and set `enable_ansible_vm = true`. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -257,7 +259,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B checkpoint 3C-4 - Ansible baseline.** App Service and the public edge are deferred/disabled. APIM and Functions are complete.
+Current checkpoint: **Day 3B complete with documented gaps; Day 4 next.** App Service, the public edge, and the Ansible VM are deferred/disabled. AKS, APIM, and Functions are running.
 
 AKS is complete:
 
@@ -302,7 +304,21 @@ App Gateway status: **deferred; disabled with `enable_app_gateway = false`.**
 - Do not enable `enable_app_gateway` without public IP quota.
 - Do not expose APIM publicly as a workaround.
 
-Day 3B next: Ansible baseline. Production gaps: App Service (quota) and public WAF edge (public IP quota). Both are documented in ADR-0012 and ADR-0013.
+Ansible status: **deferred; disabled with `enable_ansible_vm = false`.**
+
+- `infra/terraform/modules/ansible-vm/` and `ansible/playbooks/baseline.yml` retained but not applied.
+- Reason: Total Regional Cores 4/4 in `australiaeast`; VM needs 2 vCPUs.
+- No control VM, no VM SSH-hardening/idempotence demonstration.
+- Kubernetes baseline will run from AKS run command or the pipeline.
+- Do not shrink AKS or add public IPs to compensate.
+
+Day 3B production gaps:
+
+- App Service — zero App Service VM quota, ineligible (ADR-0012).
+- Public WAF edge — 3 public IP limit (ADR-0013).
+- Ansible control VM — 4/4 Total Regional Cores (ADR-0014).
+
+Day 4 starts the FastAPI app, Entra auth/RBAC, tests, and the build pipeline. Day 5 covers release, dev deployment, prod approval gate, observability, runbook, and cleanup.
 
 Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
 

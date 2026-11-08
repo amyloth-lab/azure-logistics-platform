@@ -44,6 +44,12 @@ variable "enable_app_service" {
   default     = false
 }
 
+variable "enable_ansible_vm" {
+  description = "Set true only after Total Regional Cores quota is available. The Ansible VM is deferred for this lab."
+  type        = bool
+  default     = false
+}
+
 variable "enable_app_gateway" {
   description = "Set true only after public IP quota is available. The edge is deferred for the private-only lab demo."
   type        = bool

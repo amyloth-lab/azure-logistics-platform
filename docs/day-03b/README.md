@@ -1,6 +1,6 @@
 # Day 3B - Compute and Edge Checkpoints
 
-**Status:** Checkpoints 1 (AKS), 2 (APIM), and Functions are complete. App Service and the public edge are deferred/disabled. Ansible remains.
+**Status:** Day 3B complete with documented gaps. AKS, APIM, and Functions are running. App Service, the public edge, and the Ansible VM are deferred/disabled.
 **Purpose:** Build the remaining platform services without turning one day into an unsafe mega-apply.
 **Rule:** Do one checkpoint, validate it, then ask for the next. Do not apply all three at once.
 
@@ -355,12 +355,38 @@ Do not expose APIM publicly to compensate. That would discard the private-by-des
 
 **Continue to Ansible.** Do not apply App Gateway.
 
-### Ansible
+### 3C-4 - Ansible baseline - DEFERRED
 
-- One management VM or two small VMs (Ansible control, self-hosted agent) in `snet-ansible`/`snet-devops-agents`.
-- No public IP; Bastion only.
-- Ansible installs/hardens tooling and applies the Kubernetes baseline.
-- Second run must report `changed=0`.
+**Status:** deferred. The VM is disabled:
+
+```hcl
+enable_ansible_vm = false
+```
+
+**Reason:** Total Regional Cores quota is 4/4 in `australiaeast`; the Ansible VM needs 2 vCPUs.
+
+**Decision:** keep the module and playbooks, do not create the VM. See [ADR-0014](../adr/0014-defer-ansible-vm.md).
+
+**Retained code:**
+
+- `infra/terraform/modules/ansible-vm/`
+- `ansible/playbooks/baseline.yml`
+- `ansible/ansible_key.pub` (public key only)
+
+**Consequences:**
+
+- No persistent Ansible control host.
+- No VM SSH-hardening/idempotence demonstration.
+- The Kubernetes baseline will be applied from AKS run command or the release pipeline, not from an Ansible VM.
+- Do not shrink AKS just to free vCPU quota.
+
+Day 3B is complete with these documented gaps:
+
+- App Service — quota ineligible
+- Public WAF edge — public IP quota
+- Ansible control VM — vCPU quota
+
+Do not create any of the deferred resources. Move to EOD.
 
 ---
 
