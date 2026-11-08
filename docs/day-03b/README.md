@@ -1,6 +1,6 @@
 # Day 3B - Compute and Edge Checkpoints
 
-**Status:** Checkpoint 1 code added; AKS apply pending.
+**Status:** Checkpoints 1 (AKS) and 2 (APIM) complete. App Service is blocked by subscription quota and disabled; Functions/App Gateway/Ansible remain.
 **Purpose:** Build the remaining platform services without turning one day into an unsafe mega-apply.
 **Rule:** Do one checkpoint, validate it, then ask for the next. Do not apply all three at once.
 
@@ -229,14 +229,33 @@ Stop after checkpoint 2.
 
 ## Checkpoint 3 - App Service, Functions, App Gateway, Ansible
 
-### App Service
+This checkpoint is still split. App Service is **blocked** by the subscription quota.
 
-- Linux Python plan.
-- VNet integration in `snet-appservice-outbound`.
-- Private endpoint in `snet-private-endpoints`.
-- Public network access disabled.
-- System-assigned managed identity.
-- Placeholder app until Day 4.
+### 3C-1 - App Service - BLOCKED
+
+**Blocked reason:** the subscription is ineligible for an App Service VM quota increase. Both B1 and S1 have zero App Service VM quota in `australiaeast`. Changing SKUs does not help.
+
+**Code state:** `infra/terraform/modules/app-service/` exists and validates, but the module is disabled:
+
+```hcl
+enable_app_service = false
+```
+
+With the default false, `terraform plan` will not try to create the App Service plan and will not hit the quota error.
+
+**Options:**
+
+1. **Defer App Service** and host the partner webhook on AKS for now. This keeps the private network design and zero-trust data plane. It is an architecture deviation; record it in ADR-0003 and `PROJECT-STATE.md`.
+2. Use a different Azure subscription with App Service quota. This is the cleanest way to keep the original App Service requirement.
+3. Use a public/Free App Service plan. This breaks the private endpoint and VNet integration requirements; not recommended.
+
+**Recommended for this lab:** option 1, then revisit if a subscription with quota becomes available.
+
+Do not keep changing B1/S1. Do not enable `enable_app_service` until quota exists.
+
+Continue with Functions, App Gateway, and Ansible. The partner webhook will be deployed on AKS in Day 4 as a documented deviation.
+
+### Functions
 
 ### Functions
 

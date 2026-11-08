@@ -243,6 +243,9 @@ Private services:
 | APIM private endpoint group ID error | APIM Private Link group ID is case-sensitive | Use `subresource_names = ["Gateway"]`, not `gateway`. |
 | APIM Standard v2 provider gap | `azurerm_api_management` lacks v2 outbound/public-disable support | Use `azapi_update_resource` after the private endpoint; do not use classic `virtual_network_configuration`. |
 | APIM `virtualNetworkType` cannot be `none` | A subnet config requires a type; Standard v2 uses external integration | Set `virtualNetworkType = "External"` for Standard v2. |
+| App Service `WEBSITE_VNET_ROUTE_ALL` rejected in `app_settings` | Provider manages it through a first-class property | Use `site_config.vnet_route_all_enabled = true`; do not put it in `app_settings`. |
+| App Service plan 401 `Additional quota` / `S1 VMs: 0` | Subscription has zero App Service VM quota in region | Request quota for the chosen SKU (B1 or S1) in `australiaeast`; upgrade Free/Trial to Pay-As-You-Go if needed. Changing SKU alone does not help. |
+| App Service quota request ineligible | Subscription offer does not permit App Service quota | Keep App Service disabled; use AKS for the partner webhook temporarily or move to a subscription with quota. Record the deviation. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -250,9 +253,9 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B checkpoint 2 - APIM Standard v2.**
+Current checkpoint: **Day 3B checkpoint 3C - App Service blocked; continue with Functions, App Gateway, and Ansible.** APIM is complete.
 
-AKS checkpoint is complete:
+AKS is complete:
 
 - Private cluster applied.
 - System + user node pools Ready.
@@ -261,31 +264,24 @@ AKS checkpoint is complete:
 - Firewall `aks-egress` rule collection group applied.
 - Do not change AKS unless a specific error requires it.
 
-**APIM status:** code added, apply pending.
+APIM is complete:
 
-- `infra/terraform/modules/apim/` - StandardV2_1, system-assigned identity, inbound private endpoint, `Gateway` group ID, private DNS, and `azapi_update_resource` for outbound integration + public access disable.
-- Env wiring and outputs added.
-- `terraform validate` passes; not applied.
-- Private Link group ID is **`Gateway`** (capital G).
-- `azurerm_api_management` does not expose Standard v2 outbound integration/public access disable; `azapi` is used deliberately.
-- APIM apply can take 30–60 minutes.
+- `infra/terraform/modules/apim/` - StandardV2_1, system-assigned identity, inbound private endpoint, `Gateway` group ID, private DNS.
+- `azapi_update_resource` sets `publicNetworkAccess=Disabled`, `virtualNetworkType=External`, outbound subnet.
+- Private endpoint approved; public access disabled.
+- The `virtualNetworkType=None` error was fixed by using `External`.
 
-Apply:
+App Service status: **blocked; subscription is ineligible for a quota increase.**
 
-```powershell
-cd infra\terraform\envs\dev
-Remove-Item aks.tfplan -ErrorAction SilentlyContinue
-terraform init -backend-config=backend.hcl
-terraform validate
-terraform plan -out=aks.tfplan
-terraform apply aks.tfplan
-```
+- `infra/terraform/modules/app-service/` exists and validates, but is disabled with `enable_app_service = false`.
+- `site_config.vnet_route_all_enabled = true`; do not set `WEBSITE_VNET_ROUTE_ALL` in `app_settings`.
+- `app_service_sku` is parameterized; default B1.
+- App Service VM quota is 0 in `australiaeast`; changing B1/S1 does not help.
+- No App Service resources were created.
+- Recommended: keep App Service disabled, host the partner webhook on AKS as a documented deviation, and revisit if a subscription with quota becomes available.
+- Do not enable `enable_app_service` until quota exists.
 
-Validate:
-
-```powershell
-az aks command invoke -g rg-logistics-workload-dev -n aks-logistics-dev --command "kubectl get nodes -o wide"
-```
+Day 3B next: implement Functions, App Gateway, and Ansible. App Service is recorded as a production gap, not silently dropped.
 
 Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
 

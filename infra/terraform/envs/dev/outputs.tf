@@ -61,3 +61,11 @@ output "apim_gateway_url" {
 output "apim_private_ip" {
   value = module.apim.private_ip
 }
+
+output "app_service_name" {
+  value = var.enable_app_service ? module.app_service[0].default_hostname : null
+}
+
+output "app_service_id" {
+  value = var.enable_app_service ? module.app_service[0].id : null
+}

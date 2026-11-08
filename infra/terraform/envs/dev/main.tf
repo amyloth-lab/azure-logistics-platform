@@ -258,6 +258,21 @@ module "apim" {
   tags                       = var.tags
 }
 
+module "app_service" {
+  count  = var.enable_app_service ? 1 : 0
+  source = "../../modules/app-service"
+
+  name                       = "app-logistics-${var.environment}-${random_string.suffix.result}"
+  resource_group_name        = azurerm_resource_group.workload.name
+  location                   = var.location
+  environment                = var.environment
+  sku_name                   = var.app_service_sku
+  outbound_subnet_id         = module.network_spokes.appservice_outbound_subnet_id
+  private_endpoint_subnet_id = module.network_spokes.workload_private_endpoints_subnet_id
+  private_dns_zone_id        = module.private_dns.zone_ids["privatelink.azurewebsites.net"]
+  tags                       = var.tags
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

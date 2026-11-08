@@ -38,6 +38,18 @@ variable "firewall_threat_intelligence_mode" {
   }
 }
 
+variable "enable_app_service" {
+  description = "Set true only after App Service VM quota is available. The current subscription is ineligible for a quota increase."
+  type        = bool
+  default     = false
+}
+
+variable "app_service_sku" {
+  description = "App Service plan SKU. B1 for the lab; P1v3+ for production slots."
+  type        = string
+  default     = "B1"
+}
+
 variable "apim_publisher_name" {
   description = "APIM publisher name."
   type        = string
