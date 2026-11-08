@@ -1,6 +1,6 @@
 # Day 3B - Compute and Edge Checkpoints
 
-**Status:** Checkpoints 1 (AKS) and 2 (APIM) complete. App Service is blocked/disabled. Functions code added; apply pending. App Gateway and Ansible remain.
+**Status:** Checkpoints 1 (AKS), 2 (APIM), and Functions are complete. App Service and the public edge are deferred/disabled. Ansible remains.
 **Purpose:** Build the remaining platform services without turning one day into an unsafe mega-apply.
 **Rule:** Do one checkpoint, validate it, then ask for the next. Do not apply all three at once.
 
@@ -329,13 +329,31 @@ Then re-run the plan/apply. If the Function App creation failed after the subnet
 
 Stop here and reply `FUNCTIONS done`.
 
-### App Gateway
+### 3C-3 - App Gateway WAF_v2 - DEFERRED
 
-- WAF_v2 in `snet-appgw`.
-- Public IP and TLS listener.
-- Backend pool to APIM private endpoint.
-- Health probe and WAF policy.
-- Only public application entry point.
+**Status:** deferred. The public edge is disabled:
+
+```hcl
+enable_app_gateway = false
+```
+
+**Reason:** the subscription has a 3 public IP limit in `australiaeast`, already consumed by the firewall data IP, firewall management IP, and Bastion. App Gateway needs a fourth. Public IP quota is not available for this lab.
+
+**Decision:** keep APIM private-only and demo the API from inside the workload network. Recorded in [ADR-0013](../adr/0013-defer-edge-private-only.md).
+
+**Code retained:** `infra/terraform/modules/app-gateway/` remains in the repository for a future subscription with public IP quota. Do not set `enable_app_gateway = true` here.
+
+**Consequences:**
+
+- No public API endpoint.
+- No WAF inspection or edge TLS termination demonstration.
+- No external partner webhook reachability.
+- APIM remains reachable only through its private endpoint and private DNS.
+- Demo from AKS with `az aks command invoke`, or from a Bastion-connected VM.
+
+Do not expose APIM publicly to compensate. That would discard the private-by-design control for the sake of a demo.
+
+**Continue to Ansible.** Do not apply App Gateway.
 
 ### Ansible
 

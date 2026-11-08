@@ -248,6 +248,8 @@ Private services:
 | App Service quota request ineligible | Subscription offer does not permit App Service quota | Keep App Service disabled; use AKS for the partner webhook temporarily or move to a subscription with quota. Record the deviation. |
 | Flex Function VNet integration 401 / `Microsoft.App` not registered | Flex Consumption uses Microsoft.App; provider missing | `az provider register --namespace Microsoft.App --wait`; verify `Registered`; retry plan/apply. |
 | Flex Function `SubnetMissingRequiredDelegation` | Flex requires `Microsoft.App/environments`, not `Microsoft.Web/serverFarms` | Change `snet-functions-outbound` delegation to `Microsoft.App/environments`; apply subnet update, then Function App. |
+| App Gateway `filebase64` cannot find `cert.pfx` | Certificate generated in repo root, but Terraform runs from `envs/dev` | Copy the PFX into `infra/terraform/envs/dev` or run `terraform` from the directory containing the PFX. |
+| App Gateway `PublicIPCountLimitReached` | Subscription public IP quota is 3 and all three are used | Request a public IP quota increase in `australiaeast` (to at least 4), or remove a public IP safely; do not delete firewall/Bastion IPs. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -255,7 +257,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B checkpoint 3C-2 - Functions.** App Service is blocked/disabled. APIM is complete.
+Current checkpoint: **Day 3B checkpoint 3C-4 - Ansible baseline.** App Service and the public edge are deferred/disabled. APIM and Functions are complete.
 
 AKS is complete:
 
@@ -283,29 +285,24 @@ App Service status: **blocked; subscription is ineligible for a quota increase.*
 - Recommended: keep App Service disabled, host the partner webhook on AKS as a documented deviation, and revisit if a subscription with quota becomes available.
 - Do not enable `enable_app_service` until quota exists.
 
-Functions status: **code added; Function App creation failed because `snet-functions-outbound` had the wrong delegation.** The subnet now delegates to `Microsoft.App/environments` instead of `Microsoft.Web/serverFarms`. Provider `Microsoft.App` is registered. Re-apply the subnet update and Function App.
+Functions status: **complete.**
 
-- `infra/terraform/modules/functions/` - Flex Consumption FC1, Python 3.12, user-assigned identity, private storage package container, VNet integration, public access disabled.
-- `Storage Blob Data Contributor` granted before app creation.
-- `Azure Service Bus Data Receiver` granted on the Premium namespace.
-- Storage auth uses `UserAssignedIdentity`; no storage keys.
-- `terraform validate` passes; not applied.
+- Flex Consumption Function App applied.
+- `Microsoft.App` provider registered.
+- `snet-functions-outbound` delegates to `Microsoft.App/environments`.
+- User-assigned identity with storage and Service Bus roles.
+- No function code deployed yet; Day 4.
 
-Register the missing provider, then apply Functions:
+App Gateway status: **deferred; disabled with `enable_app_gateway = false`.**
 
-```powershell
-az provider register --namespace Microsoft.App --wait
-az provider show --namespace Microsoft.App --query registrationState -o tsv
+- `infra/terraform/modules/app-gateway/` remains in the repository but is not applied.
+- Reason: 3 public IP limit; firewall data, firewall management, and Bastion consume all three.
+- Decision: APIM stays private-only; demo from AKS or a Bastion VM. See ADR-0013.
+- No public API, no WAF/edge TLS, no external partner webhook.
+- Do not enable `enable_app_gateway` without public IP quota.
+- Do not expose APIM publicly as a workaround.
 
-cd infra\terraform\envs\dev
-Remove-Item functions.tfplan -ErrorAction SilentlyContinue
-terraform init -backend-config=backend.hcl
-terraform validate
-terraform plan -out=functions.tfplan
-terraform apply functions.tfplan
-```
-
-Day 3B next: App Gateway and Ansible. App Service remains a production gap.
+Day 3B next: Ansible baseline. Production gaps: App Service (quota) and public WAF edge (public IP quota). Both are documented in ADR-0012 and ADR-0013.
 
 Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
 

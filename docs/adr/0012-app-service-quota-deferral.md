@@ -1,6 +1,6 @@
 # ADR-0012: Defer App Service and host the partner webhook on AKS temporarily
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Project owner, platform engineering
 - **Related:** ADR-0003, [Day 3B guide](../day-03b/README.md), [Project state](../PROJECT-STATE.md)

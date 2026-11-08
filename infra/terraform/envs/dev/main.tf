@@ -288,6 +288,23 @@ module "functions" {
   tags                       = var.tags
 }
 
+module "app_gateway" {
+  count  = var.enable_app_gateway ? 1 : 0
+  source = "../../modules/app-gateway"
+
+  name                     = "agw-logistics-${var.environment}-${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.platform.name
+  location                 = var.location
+  environment              = var.environment
+  subnet_id                = module.network_spokes.appgw_subnet_id
+  apim_fqdn                = module.apim.gateway_hostname
+  hostname                 = var.app_gateway_hostname
+  ssl_certificate_path     = var.app_gateway_cert_path
+  ssl_certificate_password = var.app_gateway_cert_password
+  waf_mode                 = var.waf_mode
+  tags                     = var.tags
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

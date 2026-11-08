@@ -19,7 +19,8 @@ Most ADRs below are **Proposed** on Day 1. Mark them **Accepted** after your arc
 | [0009](0009-build-release-separation.md) | Separate build and release pipelines and identities | Proposed |
 | [0010](0010-authn-authz-separation.md) | Authentication and authorization are separate concerns | Proposed |
 | [0011](0011-entra-id-free-license.md) | Operate with Microsoft Entra ID Free and compensating controls | Accepted |
-| [0012](0012-app-service-quota-deferral.md) | Defer App Service and host the partner webhook on AKS temporarily | Proposed |
+| [0012](0012-app-service-quota-deferral.md) | Defer App Service and host the partner webhook on AKS temporarily | Accepted |
+| [0013](0013-defer-edge-private-only.md) | Defer the public edge and run APIM private-only | Accepted |
 
 ## Writing a new ADR
 

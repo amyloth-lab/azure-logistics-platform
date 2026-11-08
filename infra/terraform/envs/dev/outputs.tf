@@ -77,3 +77,11 @@ output "functions_id" {
 output "functions_hostname" {
   value = module.functions.default_hostname
 }
+
+output "app_gateway_public_ip" {
+  value = var.enable_app_gateway ? module.app_gateway[0].public_ip : null
+}
+
+output "app_gateway_hostname" {
+  value = var.enable_app_gateway ? module.app_gateway[0].hostname : null
+}

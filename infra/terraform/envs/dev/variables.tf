@@ -44,6 +44,37 @@ variable "enable_app_service" {
   default     = false
 }
 
+variable "enable_app_gateway" {
+  description = "Set true only after public IP quota is available. The edge is deferred for the private-only lab demo."
+  type        = bool
+  default     = false
+}
+
+variable "app_gateway_hostname" {
+  description = "Public hostname on the App Gateway listener and certificate."
+  type        = string
+  default     = "api.logistics.example.com"
+}
+
+variable "app_gateway_cert_path" {
+  description = "Path to the PFX certificate used by App Gateway."
+  type        = string
+  default     = "cert.pfx"
+}
+
+variable "app_gateway_cert_password" {
+  description = "PFX password."
+  type        = string
+  sensitive   = true
+  default     = "changeit"
+}
+
+variable "waf_mode" {
+  description = "Detection first; switch to Prevention after tuning."
+  type        = string
+  default     = "Detection"
+}
+
 variable "app_service_sku" {
   description = "App Service plan SKU. B1 for the lab; P1v3+ for production slots."
   type        = string

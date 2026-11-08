@@ -64,6 +64,10 @@ output "gateway_url" {
   value = azurerm_api_management.this.gateway_url
 }
 
+output "gateway_hostname" {
+  value = replace(azurerm_api_management.this.gateway_url, "https://", "")
+}
+
 output "private_ip" {
   value = azurerm_private_endpoint.this.private_service_connection[0].private_ip_address
 }
