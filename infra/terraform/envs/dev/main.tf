@@ -273,6 +273,21 @@ module "app_service" {
   tags                       = var.tags
 }
 
+module "functions" {
+  source = "../../modules/functions"
+
+  name                       = "func-logistics-${var.environment}-${random_string.suffix.result}"
+  resource_group_name        = azurerm_resource_group.workload.name
+  location                   = var.location
+  environment                = var.environment
+  storage_account_id         = module.data.storage_account_id
+  storage_container_endpoint = module.data.function_packages_endpoint
+  functions_subnet_id        = module.network_spokes.functions_outbound_subnet_id
+  servicebus_namespace_id    = module.data.servicebus_namespace_id
+  servicebus_namespace_fqdn  = module.data.servicebus_namespace_fqdn
+  tags                       = var.tags
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

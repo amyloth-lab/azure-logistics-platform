@@ -75,7 +75,7 @@ resource "azurerm_storage_account" "docs" {
 }
 
 resource "azapi_resource" "containers" {
-  for_each = toset(["documents", "audit"])
+  for_each = toset(["documents", "audit", "function-packages"])
 
   type      = "Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01"
   name      = each.value
@@ -221,12 +221,20 @@ output "storage_account_id" {
   value = azurerm_storage_account.docs.id
 }
 
+output "function_packages_endpoint" {
+  value = "${azurerm_storage_account.docs.primary_blob_endpoint}function-packages"
+}
+
 output "servicebus_namespace_id" {
   value = azurerm_servicebus_namespace.this.id
 }
 
 output "servicebus_namespace_name" {
   value = azurerm_servicebus_namespace.this.name
+}
+
+output "servicebus_namespace_fqdn" {
+  value = "${azurerm_servicebus_namespace.this.name}.servicebus.windows.net"
 }
 
 output "redis_hostname" {

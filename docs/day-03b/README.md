@@ -1,6 +1,6 @@
 # Day 3B - Compute and Edge Checkpoints
 
-**Status:** Checkpoints 1 (AKS) and 2 (APIM) complete. App Service is blocked by subscription quota and disabled; Functions/App Gateway/Ansible remain.
+**Status:** Checkpoints 1 (AKS) and 2 (APIM) complete. App Service is blocked/disabled. Functions code added; apply pending. App Gateway and Ansible remain.
 **Purpose:** Build the remaining platform services without turning one day into an unsafe mega-apply.
 **Rule:** Do one checkpoint, validate it, then ask for the next. Do not apply all three at once.
 
@@ -255,15 +255,79 @@ Do not keep changing B1/S1. Do not enable `enable_app_service` until quota exist
 
 Continue with Functions, App Gateway, and Ansible. The partner webhook will be deployed on AKS in Day 4 as a documented deviation.
 
-### Functions
+### 3C-2 - Functions
 
-### Functions
+**Code added:** `infra/terraform/modules/functions/`
 
-- Flex Consumption plan.
-- VNet integration in `snet-functions-outbound`.
-- Private endpoint if HTTP trigger is added; Service Bus trigger is outbound.
-- System-assigned managed identity.
-- Placeholder function until Day 4.
+- Linux Flex Consumption plan (`FC1`).
+- Python 3.12 function app.
+- User-assigned managed identity, created before the app.
+- `Storage Blob Data Contributor` on the private storage account, granted before app creation.
+- Deployment package container `function-packages` created in the private storage account.
+- `storage_authentication_type = "UserAssignedIdentity"`; no storage keys.
+- VNet integration in `snet-functions-outbound`; route all enabled.
+- Public network access disabled; no HTTP trigger needed.
+- `Azure Service Bus Data Receiver` on the Premium namespace.
+- App settings use managed identity:
+  - `ServiceBusConnection__fullyQualifiedNamespace`
+  - `ServiceBusConnection__credential=managedidentity`
+
+**Apply:**
+
+```powershell
+cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+
+Remove-Item functions.tfplan -ErrorAction SilentlyContinue
+terraform init -backend-config=backend.hcl
+terraform validate
+terraform plan -out=functions.tfplan
+terraform apply functions.tfplan
+```
+
+**Validate:**
+
+```powershell
+$func = az functionapp list `
+  --resource-group rg-logistics-workload-dev `
+  --query "[?contains(name, 'func-logistics')].name | [0]" `
+  --output tsv
+
+az functionapp show `
+  --resource-group rg-logistics-workload-dev `
+  --name $func `
+  --query "{state:state,public:publicNetworkAccess,kind:kind,host:defaultHostName}" `
+  --output json
+```
+
+Expected: running, public access disabled, Flex Consumption kind.
+
+Check role assignments:
+
+```powershell
+az role assignment list `
+  --scope $(az storage account show -g rg-logistics-data-dev -n <storage-name> --query id -o tsv) `
+  --query "[?roleDefinitionName=='Storage Blob Data Contributor'].{principal:principalName,role:roleDefinitionName}" `
+  --output table
+```
+
+The function has no deployed code yet, so `az functionapp function list` may be empty. That is expected until Day 4.
+
+**If VNet integration fails with `SubnetMissingRequiredDelegation`:** Flex Consumption requires the subnet delegation `Microsoft.App/environments`, not `Microsoft.Web/serverFarms`. The network module now uses the correct delegation for `snet-functions-outbound`.
+
+**If VNet integration fails with `Microsoft.App is not registered`:** Flex Consumption uses the `Microsoft.App` resource provider. Register it once and retry:
+
+```powershell
+az provider register --namespace Microsoft.App --wait
+az provider show --namespace Microsoft.App --query registrationState -o tsv
+```
+
+Expected: `Registered`.
+
+Then re-run the plan/apply. If the Function App creation failed after the subnet association started, Terraform will show the failed resource as tainted and replace it.
+
+**If Flex plan creation hits App Service quota:** do not change SKUs repeatedly. Record the quota error and defer Functions the same way as App Service; do not weaken the private storage design.
+
+Stop here and reply `FUNCTIONS done`.
 
 ### App Gateway
 

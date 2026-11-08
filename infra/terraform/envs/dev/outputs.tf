@@ -69,3 +69,11 @@ output "app_service_name" {
 output "app_service_id" {
   value = var.enable_app_service ? module.app_service[0].id : null
 }
+
+output "functions_id" {
+  value = module.functions.id
+}
+
+output "functions_hostname" {
+  value = module.functions.default_hostname
+}

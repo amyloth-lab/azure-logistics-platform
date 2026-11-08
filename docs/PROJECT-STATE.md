@@ -246,6 +246,8 @@ Private services:
 | App Service `WEBSITE_VNET_ROUTE_ALL` rejected in `app_settings` | Provider manages it through a first-class property | Use `site_config.vnet_route_all_enabled = true`; do not put it in `app_settings`. |
 | App Service plan 401 `Additional quota` / `S1 VMs: 0` | Subscription has zero App Service VM quota in region | Request quota for the chosen SKU (B1 or S1) in `australiaeast`; upgrade Free/Trial to Pay-As-You-Go if needed. Changing SKU alone does not help. |
 | App Service quota request ineligible | Subscription offer does not permit App Service quota | Keep App Service disabled; use AKS for the partner webhook temporarily or move to a subscription with quota. Record the deviation. |
+| Flex Function VNet integration 401 / `Microsoft.App` not registered | Flex Consumption uses Microsoft.App; provider missing | `az provider register --namespace Microsoft.App --wait`; verify `Registered`; retry plan/apply. |
+| Flex Function `SubnetMissingRequiredDelegation` | Flex requires `Microsoft.App/environments`, not `Microsoft.Web/serverFarms` | Change `snet-functions-outbound` delegation to `Microsoft.App/environments`; apply subnet update, then Function App. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -253,7 +255,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B checkpoint 3C - App Service blocked; continue with Functions, App Gateway, and Ansible.** APIM is complete.
+Current checkpoint: **Day 3B checkpoint 3C-2 - Functions.** App Service is blocked/disabled. APIM is complete.
 
 AKS is complete:
 
@@ -281,7 +283,29 @@ App Service status: **blocked; subscription is ineligible for a quota increase.*
 - Recommended: keep App Service disabled, host the partner webhook on AKS as a documented deviation, and revisit if a subscription with quota becomes available.
 - Do not enable `enable_app_service` until quota exists.
 
-Day 3B next: implement Functions, App Gateway, and Ansible. App Service is recorded as a production gap, not silently dropped.
+Functions status: **code added; Function App creation failed because `snet-functions-outbound` had the wrong delegation.** The subnet now delegates to `Microsoft.App/environments` instead of `Microsoft.Web/serverFarms`. Provider `Microsoft.App` is registered. Re-apply the subnet update and Function App.
+
+- `infra/terraform/modules/functions/` - Flex Consumption FC1, Python 3.12, user-assigned identity, private storage package container, VNet integration, public access disabled.
+- `Storage Blob Data Contributor` granted before app creation.
+- `Azure Service Bus Data Receiver` granted on the Premium namespace.
+- Storage auth uses `UserAssignedIdentity`; no storage keys.
+- `terraform validate` passes; not applied.
+
+Register the missing provider, then apply Functions:
+
+```powershell
+az provider register --namespace Microsoft.App --wait
+az provider show --namespace Microsoft.App --query registrationState -o tsv
+
+cd infra\terraform\envs\dev
+Remove-Item functions.tfplan -ErrorAction SilentlyContinue
+terraform init -backend-config=backend.hcl
+terraform validate
+terraform plan -out=functions.tfplan
+terraform apply functions.tfplan
+```
+
+Day 3B next: App Gateway and Ansible. App Service remains a production gap.
 
 Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
 

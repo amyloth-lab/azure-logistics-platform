@@ -128,8 +128,9 @@ resource "azurerm_subnet" "functions_outbound" {
   delegation {
     name = "functions-outbound"
 
+    # Flex Consumption uses the Microsoft.App platform for VNet integration.
     service_delegation {
-      name    = "Microsoft.Web/serverFarms"
+      name    = "Microsoft.App/environments"
       actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
     }
   }
