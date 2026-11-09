@@ -502,7 +502,7 @@ Stages:
    - `pytest` with JUnit results
    - `ruff`
 2. **Security**
-   - `pip-audit`
+   - `pip freeze --exclude-editable` → `pip-audit -r requirements-audit.txt`
    - Bandit
    - Gitleaks
 3. **Build**

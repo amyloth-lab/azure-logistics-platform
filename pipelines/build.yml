@@ -70,7 +70,9 @@ stages:
               python -m pip install -e ".[dev]" pip-audit bandit
             displayName: Install security tools
 
-          - script: pip-audit --skip-editable
+          - script: |
+              python -m pip freeze --exclude-editable > requirements-audit.txt
+              pip-audit -r requirements-audit.txt
             displayName: Dependency audit
 
           - script: bandit -q -r app

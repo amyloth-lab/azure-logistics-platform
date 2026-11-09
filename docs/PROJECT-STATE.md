@@ -256,7 +256,7 @@ Private services:
 | Device sign-in “You don't have access to this” | User has no app-role assignment on `logistics-api`, or consent is missing | Set `entra_role_assignment_object_id` to the signing-in user's object ID, re-apply `-target=module.entra`, and grant `logistics-cli` consent. |
 | `AADSTS530035` for `whrsoft@gmail.com` or `manager@...` | Personal/Gmail account is not a member/guest, or a Conditional Access policy blocks the unregistered device | Check the sign-in log's Conditional Access tab by request/correlation ID. If a policy requires a compliant/Entra-joined device, exclude the lab user from that specific policy or use a compliant device. Also verify the user is assigned to `logistics-api` if assignment is required. |
 | `Permission being assigned already exists on the object` | App role assignment already exists outside Terraform state, often from portal or a partial apply | Remove all app-role assignments for that user on `logistics-api`, then re-apply; or import the existing assignment. Do not create duplicates. |
-| Build `pip-audit`: `logistics-api Dependency not found on PyPI` | `pip-audit` audits the editable local project as a PyPI dependency | Run `pip-audit --skip-editable`; do not skip the audit entirely. |
+| Build `pip-audit`: `logistics-api Dependency not found on PyPI` | `pip-audit` audits the editable local project as a PyPI dependency; `--skip-editable` can still exit non-zero | Generate a requirements file with `pip freeze --exclude-editable` and audit that file; do not skip the audit. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
