@@ -70,7 +70,7 @@ stages:
               python -m pip install -e ".[dev]" pip-audit bandit
             displayName: Install security tools
 
-          - script: pip-audit
+          - script: pip-audit --skip-editable
             displayName: Dependency audit
 
           - script: bandit -q -r app
