@@ -56,6 +56,12 @@ variable "enable_app_gateway" {
   default     = false
 }
 
+variable "entra_role_assignment_object_id" {
+  description = "Optional user/group object ID to receive the human app roles instead of the Terraform caller."
+  type        = string
+  default     = null
+}
+
 variable "app_gateway_hostname" {
   description = "Public hostname on the App Gateway listener and certificate."
   type        = string

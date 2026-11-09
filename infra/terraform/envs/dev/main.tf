@@ -317,6 +317,15 @@ module "ansible" {
   tags                = var.tags
 }
 
+module "entra" {
+  source = "../../modules/entra"
+
+  display_name                 = "logistics-api"
+  audience                     = "api://logistics-api"
+  assign_roles_to_current_user = true
+  role_assignment_object_id    = var.entra_role_assignment_object_id
+}
+
 module "keyvault" {
   source = "../../modules/keyvault"
 

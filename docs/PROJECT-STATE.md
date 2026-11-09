@@ -1,6 +1,6 @@
 # Project State - Azure Logistics Platform
 
-**Last updated:** 2026-11-08 (AKS checkpoint complete)
+**Last updated:** 2026-11-09 (EOD Day 3B)
 **Purpose:** Canonical, compact project memory. Read this first instead of re-reading Day 1/Day 2 documents.
 **Rule:** Update this file at the end of every day. Keep it under ~250 lines. Do not put real subscription IDs, tenant IDs, emails, secrets, or storage keys in it.
 
@@ -252,6 +252,10 @@ Private services:
 | App Gateway `PublicIPCountLimitReached` | Subscription public IP quota is 3 and all three are used | Request a public IP quota increase in `australiaeast` (to at least 4), or remove a public IP safely; do not delete firewall/Bastion IPs. |
 | Terraform init `az.sess` / `commands` PermissionError | Azure CLI cannot write its session/log directory | `icacls "$env:USERPROFILE\.azure" /grant "$($env:USERNAME):(OI)(CI)F" /T`, then `az login`. |
 | Ansible VM `Total Regional Cores` 4/4 | No free vCPU quota in `australiaeast` | Deferred per ADR-0014; if quota is later available, request 6–8 and set `enable_ansible_vm = true`. |
+| Azure CLI `AADSTS65001` / `AADSTS650057` for `api://logistics-api` | Azure CLI cannot request tokens for an arbitrary custom API; its app registration lacks the resource | Use the Terraform-created `logistics-cli` public client and `scripts/get_token.py` (MSAL device code), not `az login --scope`. |
+| Device sign-in “You don't have access to this” | User has no app-role assignment on `logistics-api`, or consent is missing | Set `entra_role_assignment_object_id` to the signing-in user's object ID, re-apply `-target=module.entra`, and grant `logistics-cli` consent. |
+| `AADSTS530035` for `whrsoft@gmail.com` or `manager@...` | Personal/Gmail account is not a member/guest, or a Conditional Access policy blocks the unregistered device | Check the sign-in log's Conditional Access tab by request/correlation ID. If a policy requires a compliant/Entra-joined device, exclude the lab user from that specific policy or use a compliant device. Also verify the user is assigned to `logistics-api` if assignment is required. |
+| `Permission being assigned already exists on the object` | App role assignment already exists outside Terraform state, often from portal or a partial apply | Remove all app-role assignments for that user on `logistics-api`, then re-apply; or import the existing assignment. Do not create duplicates. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -259,76 +263,55 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 3B complete with documented gaps; Day 4 next.** App Service, the public edge, and the Ansible VM are deferred/disabled. AKS, APIM, and Functions are running.
+Current checkpoint: **Day 4 checkpoint 4B - Entra JWT validation code added; app registration/config pending.** Day 3B is complete with documented gaps.
 
-AKS is complete:
+### Day 4 checkpoint 4A - complete
 
-- Private cluster applied.
-- System + user node pools Ready.
-- Existing `privatelink.australiaeast.azmk8s.io` zone with UAI, `Private DNS Zone Contributor`, `Network Contributor`.
-- `Azure Kubernetes Service RBAC Cluster Admin` applied; `kubectl get nodes` works through `az aks command invoke`.
-- Firewall `aks-egress` rule collection group applied.
-- Do not change AKS unless a specific error requires it.
+- Canonical layout: root `app/` package, root `tests/`, root `pipelines/`, root `pyproject.toml`.
+- FastAPI health/inventory/orders, SQLAlchemy models, Pydantic schemas.
+- Tests cover health, inventory CRUD, manager delete, order ownership, manager access.
+- Python `>=3.12,<3.14`; dev extras include `httpx2`.
+- Do not create `apps/api`.
 
-APIM is complete:
+### Day 4 checkpoint 4B - code added; Entra apply pending
 
-- `infra/terraform/modules/apim/` - StandardV2_1, system-assigned identity, inbound private endpoint, `Gateway` group ID, private DNS.
-- `azapi_update_resource` sets `publicNetworkAccess=Disabled`, `virtualNetworkType=External`, outbound subnet.
-- Private endpoint approved; public access disabled.
-- The `virtualNetworkType=None` error was fixed by using `External`.
+- `app/security.py` validates Entra JWT: RS256, JWKS cache, `iss`, `aud`, `exp`, `iat`, `tid`, `oid`/`sub`, `roles`.
+- `Authorization: Bearer` required unless the local `DEV_AUTH_ENABLED` shim is explicitly enabled.
+- `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`, `ENTRA_ISSUER`, `ENTRA_JWKS_URL` added to settings and `.env.example`.
+- `tests/test_token_validation.py` covers valid, expired, wrong audience, wrong tenant, missing `oid`, missing/malformed header.
+- `infra/terraform/modules/entra/` creates the API app registration, `access_as_user` scope, six app roles, service principal, and five role assignments to the Terraform caller.
+- It also creates the public client `logistics-cli`, redirect URI `http://localhost`, delegated `access_as_user` permission, and a delegated permission grant.
+- `azuread` provider added; `terraform validate` passes.
+- Apply only `-target=module.entra`; no real token has been validated yet.
+- Do not use Azure CLI to request the custom API token: `AADSTS650057` is expected. Use `scripts/get_token.py` (MSAL device-code) with `ENTRA_CLIENT_ID` = `entra_cli_client_id`.
+- Entra app registration is Terraform-managed; do not create a duplicate app in the portal.
+- If the browser says the user has no access, the app-role assignment went to the Terraform caller rather than the signing-in user. Set `entra_role_assignment_object_id` to the user's Entra object ID and re-apply `-target=module.entra`.
 
-App Service status: **blocked; subscription is ineligible for a quota increase.**
+### Day 3B completed
 
-- `infra/terraform/modules/app-service/` exists and validates, but is disabled with `enable_app_service = false`.
-- `site_config.vnet_route_all_enabled = true`; do not set `WEBSITE_VNET_ROUTE_ALL` in `app_settings`.
-- `app_service_sku` is parameterized; default B1.
-- App Service VM quota is 0 in `australiaeast`; changing B1/S1 does not help.
-- No App Service resources were created.
-- Recommended: keep App Service disabled, host the partner webhook on AKS as a documented deviation, and revisit if a subscription with quota becomes available.
-- Do not enable `enable_app_service` until quota exists.
+- AKS private cluster, system + user pools, Entra RBAC, ACR pull.
+- APIM Standard v2, private endpoint, public access disabled, `virtualNetworkType=External`.
+- Flex Consumption Function App, `Microsoft.App/environments` delegation, private storage, Service Bus receiver.
+- Terraform state, private DNS, firewall egress, data services.
 
-Functions status: **complete.**
+### Day 3B deferred (production gaps)
 
-- Flex Consumption Function App applied.
-- `Microsoft.App` provider registered.
-- `snet-functions-outbound` delegates to `Microsoft.App/environments`.
-- User-assigned identity with storage and Service Bus roles.
-- No function code deployed yet; Day 4.
+- **App Service** - zero App Service VM quota, ineligible. `enable_app_service=false`. ADR-0012.
+- **Public WAF edge** - 3 public IP limit. APIM private-only; `enable_app_gateway=false`. ADR-0013.
+- **Ansible VM** - 4/4 Total Regional Cores. `enable_ansible_vm=false`. ADR-0014.
 
-App Gateway status: **deferred; disabled with `enable_app_gateway = false`.**
+No public API endpoint; demo from AKS or a Bastion-connected VM. Do not weaken the private design to compensate.
 
-- `infra/terraform/modules/app-gateway/` remains in the repository but is not applied.
-- Reason: 3 public IP limit; firewall data, firewall management, and Bastion consume all three.
-- Decision: APIM stays private-only; demo from AKS or a Bastion VM. See ADR-0013.
-- No public API, no WAF/edge TLS, no external partner webhook.
-- Do not enable `enable_app_gateway` without public IP quota.
-- Do not expose APIM publicly as a workaround.
+### Day 4 scope
 
-Ansible status: **deferred; disabled with `enable_ansible_vm = false`.**
+1. FastAPI skeleton: inventory + orders, SQLAlchemy, Alembic, Pydantic, Redis.
+2. Entra JWT validation; manager delete; own-order access.
+3. Unit/API tests.
+4. Build pipeline: test, scan, image build, push to ACR.
 
-- `infra/terraform/modules/ansible-vm/` and `ansible/playbooks/baseline.yml` retained but not applied.
-- Reason: Total Regional Cores 4/4 in `australiaeast`; VM needs 2 vCPUs.
-- No control VM, no VM SSH-hardening/idempotence demonstration.
-- Kubernetes baseline will run from AKS run command or the pipeline.
-- Do not shrink AKS or add public IPs to compensate.
+Day 5: release pipeline, dev deployment, prod approval gate, observability, runbook, cleanup.
 
-Day 3B production gaps:
-
-- App Service — zero App Service VM quota, ineligible (ADR-0012).
-- Public WAF edge — 3 public IP limit (ADR-0013).
-- Ansible control VM — 4/4 Total Regional Cores (ADR-0014).
-
-Day 4 starts the FastAPI app, Entra auth/RBAC, tests, and the build pipeline. Day 5 covers release, dev deployment, prod approval gate, observability, runbook, and cleanup.
-
-Day 3B is deliberately split into three checkpoints because it is too large for one sitting. Guide: `docs/day-03b/README.md`.
-
-1. **3B-1 - AKS:** private cluster, system/user node pools, Azure CNI Overlay, workload identity, OIDC issuer, internal ingress, ACR pull, Entra RBAC. Validate nodes and private API.
-   - **Decided:** use the existing `privatelink.australiaeast.azmk8s.io` zone with a user-assigned identity + `Private DNS Zone Contributor` and `Network Contributor`. Code is added; apply pending.
-2. **3B-2 - APIM:** Standard v2, inbound private endpoint, outbound VNet integration, backend/health policy. Validate private access and 401/403 behavior.
-3. **3B-3 - Edge/PaaS/Ansible:** App Service, Functions, App Gateway WAF_v2, Ansible control/agent VMs, Kubernetes baseline.
-
-Day 4 adds the FastAPI app, Entra auth/RBAC, tests, and build pipeline.
-Day 5 adds release pipeline, dev deployment, prod approval gate, observability, runbook, and cleanup.
+Guide: `docs/day-04/README.md`.
 
 ---
 

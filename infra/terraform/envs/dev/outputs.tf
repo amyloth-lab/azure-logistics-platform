@@ -93,3 +93,31 @@ output "ansible_vm_id" {
 output "ansible_private_ip" {
   value = var.enable_ansible_vm ? module.ansible[0].private_ip : null
 }
+
+output "entra_client_id" {
+  value = module.entra.client_id
+}
+
+output "entra_audience" {
+  value = module.entra.audience
+}
+
+output "entra_issuer" {
+  value = module.entra.issuer
+}
+
+output "entra_jwks_url" {
+  value = module.entra.jwks_url
+}
+
+output "entra_tenant_id" {
+  value = module.entra.tenant_id
+}
+
+output "entra_app_role_ids" {
+  value = module.entra.app_role_ids
+}
+
+output "entra_cli_client_id" {
+  value = module.entra.cli_client_id
+}
