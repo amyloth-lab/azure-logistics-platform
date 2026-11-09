@@ -510,6 +510,22 @@ Stages:
    - publish image digest
 
 ACR Tasks is intentionally not used. This subscription returns `TasksOperationsNotAllowed` for `az acr build`; local Docker build avoids that restriction while keeping the AcrPush-only identity.
+
+**Private ACR and hosted agents:** a Microsoft-hosted Azure DevOps agent is outside the VNet and cannot reach an ACR whose public network access is disabled. If `az acr login` returns 403 despite AcrPush, check:
+
+```powershell
+az acr show --name <acr> `
+  --query "{public:publicNetworkAccess,armAuth:policies.azureADAuthenticationAsArmPolicy.status,pe:privateEndpointConnections[0].privateLinkServiceConnectionState.status}" `
+  --output json
+```
+
+If `public` is `Disabled`, the hosted agent cannot push. This lab uses a documented temporary exception:
+
+```hcl
+acr_public_network_access_enabled = true
+```
+
+The private endpoint and admin-disabled setting remain. See [ADR-0015](../adr/0015-acr-public-access-for-hosted-build.md). Production remediation is a self-hosted agent inside the VNet, then set this back to `false`.
 4. **No deploy**
 
 Azure DevOps prerequisites:

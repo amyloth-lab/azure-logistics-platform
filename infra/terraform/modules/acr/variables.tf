@@ -18,6 +18,12 @@ variable "private_endpoint_subnet_id" {
   type        = string
 }
 
+variable "public_network_access_enabled" {
+  description = "Allow the public ACR endpoint. Lab-only exception for Microsoft-hosted build agents."
+  type        = bool
+  default     = false
+}
+
 variable "private_dns_zone_id" {
   description = "ID of privatelink.azurecr.io."
   type        = string

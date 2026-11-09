@@ -2,6 +2,7 @@ prefix                      = "logistics"
 environment                 = "dev"
 location                    = "australiaeast"
 sql_admin_login             = "logistics-sql-admin"
+acr_public_network_access_enabled = false # lab-only exception for Microsoft-hosted build agents
 entra_role_assignment_object_id = null # set to the signing-in user's Entra object ID if different from the Terraform caller
 enable_ansible_vm           = false # set true only after Total Regional Cores quota is available
 enable_app_gateway          = false # set true only after public IP quota is available

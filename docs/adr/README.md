@@ -22,6 +22,7 @@ Most ADRs below are **Proposed** on Day 1. Mark them **Accepted** after your arc
 | [0012](0012-app-service-quota-deferral.md) | Defer App Service and host the partner webhook on AKS temporarily | Accepted |
 | [0013](0013-defer-edge-private-only.md) | Defer the public edge and run APIM private-only | Accepted |
 | [0014](0014-defer-ansible-vm.md) | Defer the Ansible control VM due to vCPU quota | Accepted |
+| [0015](0015-acr-public-access-for-hosted-build.md) | Temporarily enable ACR public access for hosted build agents | Accepted |
 
 ## Writing a new ADR
 

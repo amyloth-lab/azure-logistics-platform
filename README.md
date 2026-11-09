@@ -6,9 +6,9 @@ The business capability is deliberately small: **inventory** and **orders** APIs
 
 The engineering capability is deliberately realistic: hub-and-spoke networking, private endpoints, WAF, API Management, AKS, App Service, Azure Functions, Service Bus, Azure SQL, Azure Managed Redis, Blob Storage, Key Vault, Terraform, Ansible, policy, observability, and a software supply-chain gate.
 
-> **Current checkpoint: Day 4 - checkpoint 4D (build pipeline run).**
-> Read [PROJECT-STATE.md](docs/PROJECT-STATE.md) first, then [Day 4](docs/day-04/README.md).
-> Day 3B is complete with documented gaps: App Service, the public WAF edge, and the Ansible VM are deferred.
+> **Current checkpoint: Day 5 - checkpoint 5A (green build).**
+> Read [PROJECT-STATE.md](docs/PROJECT-STATE.md) first, then [Day 5](docs/day-05/README.md).
+> Day 4 is complete except the first green image build. Day 3B has documented gaps: App Service, the public WAF edge, and the Ansible VM are deferred.
 >
 > **Project memory:** [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md). Read this first to avoid re-loading old context. Update it at every EOD.
 
@@ -115,6 +115,9 @@ python diagrams/render_diagrams.py
 │   │   └── README.md            # AKS, APIM, Functions, deferred edge/Ansible
 │   ├── day-04/
 │   │   └── README.md            # FastAPI, Entra auth, tests, build pipeline
+│   ├── day-05/
+│   │   └── README.md            # Release, deployment, observability, cleanup
+│   ├── cost-control.md          # Overnight stop/start and destroy guidance
 │   └── adr/                     # Architecture Decision Records
 ├── infra/
 │   ├── ansible/                 # configuration management (Day 3+)
@@ -169,10 +172,10 @@ A cost-controlled lab profile is documented in [docs/day-01/plan-of-action.md](d
 
 ## Start here
 
-1. **Day 4:** read [PROJECT-STATE.md](docs/PROJECT-STATE.md), then [Day 4](docs/day-04/README.md).
-2. **Completed:** [Day 1](docs/day-01/README.md), [Day 2](docs/day-02/README.md), [Day 3A](docs/day-03/README.md), [Day 3B](docs/day-03b/README.md) with documented gaps.
-3. Start with Day 4 checkpoint 4B: Entra JWT validation and RBAC.
+1. **Day 5:** read [PROJECT-STATE.md](docs/PROJECT-STATE.md), then [Day 5](docs/day-05/README.md).
+2. **Completed:** [Day 1](docs/day-01/README.md), [Day 2](docs/day-02/README.md), [Day 3A](docs/day-03/README.md), [Day 3B](docs/day-03b/README.md), [Day 4](docs/day-04/README.md) with documented gaps.
+3. Start with Day 5 checkpoint 5A: finish the green build.
 4. Commit and tag each checkpoint.
-5. Reply **`EOD`** after Day 4, or ask for the next checkpoint.
+5. Reply **`EOD`** after Day 5, or ask for the next checkpoint.
 
 If you get stuck, use the Copilot prompts in the guide. Do not skip the network and RBAC decisions to "save time"; those decisions are the project.

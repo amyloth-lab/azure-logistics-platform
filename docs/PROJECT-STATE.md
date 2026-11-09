@@ -1,6 +1,6 @@
 # Project State - Azure Logistics Platform
 
-**Last updated:** 2026-11-09 (EOD Day 3B)
+**Last updated:** 2026-11-09 (EOD Day 4)
 **Purpose:** Canonical, compact project memory. Read this first instead of re-reading Day 1/Day 2 documents.
 **Rule:** Update this file at the end of every day. Keep it under ~250 lines. Do not put real subscription IDs, tenant IDs, emails, secrets, or storage keys in it.
 
@@ -268,74 +268,38 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps run pending.** 4A, 4B, and 4C are complete; Day 3B remains complete with documented gaps.
+Current checkpoint: **Day 5 checkpoint 5A - complete the first green build.** Day 4 is complete except the first successful Azure DevOps image build.
 
-### Day 4 checkpoint 4A - complete
+### Day 4 completed
 
-- Canonical layout: root `app/` package, root `tests/`, root `pipelines/`, root `pyproject.toml`.
-- FastAPI health/inventory/orders, SQLAlchemy models, Pydantic schemas.
-- Tests cover health, inventory CRUD, manager delete, order ownership, manager access.
-- Python `>=3.12,<3.14`; dev extras include `httpx2` and `pytest>=9.0.3` (PYSEC-2026-1845 fix). `pytest-asyncio` removed because tests are synchronous.
-- Do not create `apps/api`.
+- 4A: FastAPI `app/` package, inventory/orders, SQLAlchemy, Pydantic; root `tests/`, `pipelines/`, `pyproject.toml`.
+- 4B: Entra JWT validation, `logistics-cli` public client, device-code token script, Terraform app roles/assignments.
+- 4C: 18 tests pass; Ruff passes.
+- 4D code: Dockerfile, build pipeline, pip-audit, Bandit, Gitleaks, local Docker build/push, Trivy.
+- `pytest>=9.0.3` fixes PYSEC-2026-1845.
+- ACR public access is a temporary lab exception (ADR-0015); private endpoint and admin-disabled remain.
+- Cost scripts: `scripts/stop-lab.ps1`, `scripts/start-lab.ps1`; guide `docs/cost-control.md`.
 
-### Day 4 checkpoint 4B - complete
+### Day 4 open item
 
-- `app/security.py` validates Entra JWT: RS256, JWKS cache, `iss`, `aud`, `exp`, `iat`, `tid`, `oid`/`sub`, `roles`.
-- `Authorization: Bearer` required unless the local `DEV_AUTH_ENABLED` shim is explicitly enabled.
-- `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`, `ENTRA_ISSUER`, `ENTRA_JWKS_URL` in settings and `.env.example`.
-- `infra/terraform/modules/entra/` creates the API app registration, `access_as_user` scope, six app roles, service principal, and role assignments.
-- It also creates `logistics-cli` (public client, `http://localhost`, delegated `access_as_user`, delegated grant).
-- Real user token acquired via `scripts/get_token.py` (MSAL device code); Azure CLI cannot request this custom API.
-- App role assignment may target `entra_role_assignment_object_id`; tenant member account required.
-- Entra app registration is Terraform-managed; do not create a duplicate in the portal.
+The first green Azure DevOps build is still pending. Current blocker: Trivy zlib1g CVEs; Dockerfile now upgrades `zlib1g` after pulling the base image. Rebuild and confirm the image digest.
 
-### Day 4 checkpoint 4C - complete
+### Day 3B deferred gaps
 
-- 18 tests passed with `.venv\Scripts\python.exe -m pytest -q`.
-- Ruff passes with `.venv\Scripts\ruff.exe check .`.
-- Tests include role-required 403, contributor delete 403, query-token rejection, non-order role 403, cross-user update 404, manager sees all orders.
-- `ruff` excludes `diagrams/` and `scripts/build_backlog_csv.py` because they contain generated/long data lines; application/test code is still checked.
-
-### Cost control
-
-- `scripts/stop-lab.ps1` — stops AKS and pauses serverless SQL.
-- `scripts/start-lab.ps1` — starts AKS and resumes paused SQL.
-- `docs/cost-control.md` — what can and cannot be stopped; why `terraform destroy` is not an overnight pause.
-- Fixed-cost services continue billing: APIM, Firewall, Bastion, Service Bus Premium, ACR Premium, Redis, public IPs.
-
-### Day 4 checkpoint 4D - code added, run pending
-
-- `pipelines/build.yml`: test/lint, pip-audit (frozen requirements, editable project excluded), Bandit, Gitleaks, local Docker build + push to ACR, Trivy scan, immutable image reference artifact. No deployment and no ACR Tasks.
-- `Dockerfile`: multi-stage, non-root, Python 3.12.
-- Dev dependency `pytest>=9.0.3` fixes PYSEC-2026-1845; unused `pytest-asyncio` removed.
-- ACR public access is temporarily enabled (`acr_public_network_access_enabled = true`) so Microsoft-hosted agents can push. Private endpoint and admin-disabled setting remain. See ADR-0015.
-- Build pipeline requires variable group `vg-logistics-build` with `ACR_NAME`, `azureServiceConnection`, and an AcrPush service connection. Not run yet.
-
-### Day 3B completed
-
-- AKS private cluster, system + user pools, Entra RBAC, ACR pull.
-- APIM Standard v2, private endpoint, public access disabled, `virtualNetworkType=External`.
-- Flex Consumption Function App, `Microsoft.App/environments` delegation, private storage, Service Bus receiver.
-- Terraform state, private DNS, firewall egress, data services.
-
-### Day 3B deferred (production gaps)
-
-- **App Service** - zero App Service VM quota, ineligible. `enable_app_service=false`. ADR-0012.
-- **Public WAF edge** - 3 public IP limit. APIM private-only; `enable_app_gateway=false`. ADR-0013.
-- **Ansible VM** - 4/4 Total Regional Cores. `enable_ansible_vm=false`. ADR-0014.
+- App Service: zero App Service VM quota, ineligible. ADR-0012.
+- Public WAF edge: 3 public IP limit; APIM private-only. ADR-0013.
+- Ansible control VM: 4/4 Total Regional Cores. ADR-0014.
 
 No public API endpoint; demo from AKS or a Bastion-connected VM. Do not weaken the private design to compensate.
 
-### Day 4 scope
+### Day 5 scope
 
-1. FastAPI skeleton: inventory + orders, SQLAlchemy, Alembic, Pydantic, Redis.
-2. Entra JWT validation; manager delete; own-order access.
-3. Unit/API tests.
-4. Build pipeline: test, scan, image build, push to ACR.
+1. **5A:** green build, immutable digest, scans clean.
+2. **5B:** Helm chart/manifests for AKS, APIM backend, migration job.
+3. **5C:** release pipeline, dev deployment, smoke tests.
+4. **5D:** prod approval gate, observability, runbook, cleanup.
 
-Day 5: release pipeline, dev deployment, prod approval gate, observability, runbook, cleanup.
-
-Guide: `docs/day-04/README.md`.
+Guide: `docs/day-05/README.md`.
 
 ---
 

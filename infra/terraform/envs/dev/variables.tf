@@ -56,6 +56,12 @@ variable "enable_app_gateway" {
   default     = false
 }
 
+variable "acr_public_network_access_enabled" {
+  description = "Temporary lab exception so Microsoft-hosted Azure DevOps agents can push to ACR."
+  type        = bool
+  default     = false
+}
+
 variable "entra_role_assignment_object_id" {
   description = "Optional user/group object ID to receive the human app roles instead of the Terraform caller."
   type        = string

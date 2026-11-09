@@ -208,12 +208,13 @@ module "network_spokes" {
 module "acr" {
   source = "../../modules/acr"
 
-  name                       = "acr${var.prefix}${var.environment}${random_string.suffix.result}"
-  resource_group_name        = azurerm_resource_group.management.name
-  location                   = var.location
-  private_endpoint_subnet_id = module.network_spokes.management_private_endpoints_subnet_id
-  private_dns_zone_id        = module.private_dns.zone_ids["privatelink.azurecr.io"]
-  tags                       = var.tags
+  name                          = "acr${var.prefix}${var.environment}${random_string.suffix.result}"
+  resource_group_name           = azurerm_resource_group.management.name
+  location                      = var.location
+  private_endpoint_subnet_id    = module.network_spokes.management_private_endpoints_subnet_id
+  private_dns_zone_id           = module.private_dns.zone_ids["privatelink.azurecr.io"]
+  public_network_access_enabled = var.acr_public_network_access_enabled
+  tags                          = var.tags
 }
 
 module "aks" {
