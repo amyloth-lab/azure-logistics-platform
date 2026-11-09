@@ -184,6 +184,14 @@ resource "azurerm_firewall_policy_rule_collection_group" "aks_egress" {
     action   = "Allow"
 
     rule {
+      name                  = "acr-private-endpoint"
+      source_addresses      = ["10.2.0.0/16"]
+      destination_addresses = ["10.4.2.0/24"]
+      destination_ports     = ["443"]
+      protocols             = ["TCP"]
+    }
+
+    rule {
       name                  = "ntp"
       source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
       destination_addresses = ["*"]
@@ -272,6 +280,20 @@ module "app_service" {
   private_endpoint_subnet_id = module.network_spokes.workload_private_endpoints_subnet_id
   private_dns_zone_id        = module.private_dns.zone_ids["privatelink.azurewebsites.net"]
   tags                       = var.tags
+}
+
+module "api_identity" {
+  source = "../../modules/api-identity"
+
+  name                    = "id-api-logistics-${var.environment}-${random_string.suffix.result}"
+  resource_group_name     = azurerm_resource_group.workload.name
+  location                = var.location
+  aks_oidc_issuer_url     = module.aks.oidc_issuer_url
+  namespace               = "logistics"
+  service_account         = "logistics-api"
+  storage_account_id      = module.data.storage_account_id
+  servicebus_namespace_id = module.data.servicebus_namespace_id
+  tags                    = var.tags
 }
 
 module "functions" {

@@ -121,3 +121,15 @@ output "entra_app_role_ids" {
 output "entra_cli_client_id" {
   value = module.entra.cli_client_id
 }
+
+output "api_identity_client_id" {
+  value = module.api_identity.client_id
+}
+
+output "api_identity_principal_id" {
+  value = module.api_identity.principal_id
+}
+
+output "api_identity_name" {
+  value = module.api_identity.name
+}

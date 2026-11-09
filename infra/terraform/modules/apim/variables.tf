@@ -44,6 +44,12 @@ variable "private_dns_zone_id" {
   type        = string
 }
 
+variable "backend_service_url" {
+  description = "Internal AKS service URL used as the APIM backend."
+  type        = string
+  default     = "http://10.2.12.10:80"
+}
+
 variable "tags" {
   description = "Tags applied to APIM resources."
   type        = map(string)

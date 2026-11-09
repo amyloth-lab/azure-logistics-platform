@@ -27,6 +27,57 @@ Stop after 5A and reply `5A done`.
 
 ---
 
+## Checkpoint 5B-0 - Production data path
+
+Do not package the current SQLite app as if it uses Azure SQL.
+
+Implemented:
+
+1. `pyodbc` and `azure-identity` added; `msodbcsql18` installed in the runtime image.
+2. `app/db.py` acquires an Azure SQL access token with `DefaultAzureCredential` when `DATABASE_URL` starts with `mssql+pyodbc`.
+3. `infra/terraform/modules/api-identity/` creates the API user-assigned identity and AKS federated credential.
+4. Blob and Service Bus role assignments are attached to that identity.
+5. `deploy/helm/logistics-api/` includes the Deployment, ServiceAccount, internal LoadBalancer Service, and schema-init Job.
+
+Still manual:
+
+- Create the SQL contained user and grant `db_datareader`, `db_datawriter`, and the migration schema rights.
+- Apply the identity Terraform.
+- Build the image with the ODBC driver.
+- Run the schema Job/Helm deployment and smoke test.
+
+The app does not have Alembic migrations yet. The Helm hook uses `Base.metadata.create_all` as a temporary schema bootstrap; replace it with Alembic before production.
+
+Only after the SQL user is created and the identity is federated should Helm deploy the API.
+
+### Manual vs automated
+
+| Task | Owner |
+|---|---|
+| Add `pyodbc`, `azure-identity`, ODBC driver | Code/Terraform |
+| Token-based SQLAlchemy connection | Code |
+| API user-assigned identity + AKS federation | Terraform |
+| Role assignments for SQL/Redis/Blob/Service Bus | Terraform |
+| Alembic/init job | Code/Terraform |
+| Helm chart and APIM backend | Code/Terraform |
+| **Create the contained SQL user and grant DB roles** | **Manual T-SQL** |
+| **Provide SQL admin access to run that T-SQL** | **Manual** |
+| Build image, run pipeline, deploy | Manual trigger |
+| Smoke test from inside the VNet | Manual |
+
+The contained SQL user is the main unavoidable manual step: `azurerm` does not create database principals inside Azure SQL. It must be run as the SQL Entra administrator.
+
+Because SQL has no public access, you need one of:
+
+- a temporary jumpbox/pod inside the VNet with `sqlcmd`, or
+- a temporary SQL firewall/public-access exception for your client IP, reverted immediately after creating the user.
+
+Do not enable SQL authentication. Keep Entra-only authentication.
+
+Stop after 5B-0 and reply `5B-0 done`.
+
+---
+
 ## Checkpoint 5B - AKS deployment assets
 
 Create:
@@ -54,14 +105,86 @@ Requirements:
 - Internal-only ingress or internal load balancer. No public Service.
 - Migration job runs `alembic upgrade head` with a separate service account.
 
+### Deploy the chart
+
+The AKS API server is private, so use `az aks command invoke`, which runs `helm` inside the cluster.
+
+Package the chart:
+
+```powershell
+helm package deploy\helm\logistics-api -d .tmp-chart
+```
+
+Prepare `values-dev.yaml`, then deploy:
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --file .tmp-chart\logistics-api-0.1.0.tgz `
+  --file deploy\helm\logistics-api\values-dev.yaml `
+  --command "helm upgrade --install logistics-api ./logistics-api-0.1.0.tgz -n logistics --create-namespace -f ./values-dev.yaml --atomic"
+```
+
+The chart creates:
+
+- `logistics` namespace
+- Deployment with 2 replicas
+- ServiceAccount with workload identity
+- Internal LoadBalancer Service at `10.2.12.10:80`
+- Schema-init Job
+
+Check:
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --command "kubectl get pods,svc -n logistics; kubectl logs -n logistics -l app.kubernetes.io/name=logistics-api --tail=50"
+```
+
+If the LoadBalancer stays `Pending`, check the AKS cluster identity has Network Contributor on the workload VNet and that `snet-aks-ingress` has a free address.
+
+If the pod fails to pull from ACR with `EOF`, AKS is routing to the firewall but the private ACR endpoint is not allowed. The ACR private endpoint is in the management VNet `10.4.2.0/24`; add and apply the `acr-private-endpoint` network rule, then restart the pod.
+
+If the pod reports `CreateContainerConfigError`, inspect the exact event:
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --command "kubectl describe pod -n logistics -l app.kubernetes.io/name=logistics-api | tail -40"
+```
+
+The image must use a numeric UID/GID because `runAsNonRoot: true` cannot verify a non-numeric `USER app`. Rebuild with UID/GID `10001:10001`.
+
+Verify the ACR private IP and DNS:
+
+```powershell
+az network private-endpoint list `
+  --resource-group rg-logistics-management-dev `
+  --query "[?contains(name, 'acr')].{name:name,ip:customDnsConfigs[0].ipAddresses[0],state:privateLinkServiceConnections[0].privateLinkServiceConnectionState.status}" `
+  --output table
+```
+
+The pod must resolve the ACR hostname to that private IP, not a public address.
+
 ### APIM backend
 
-APIM already exists and is private. Configure its backend to the internal AKS service:
+The APIM module now creates:
 
-- Install an internal ingress controller or use an internal load balancer.
-- Use a private DNS name such as `api.logistics.internal`.
-- Do not expose a public AKS endpoint.
-- Keep APIM public access disabled.
+- API `logistics-api`
+- Path `logistics`
+- Backend service URL `http://10.2.12.10:80`
+- Operations for `/health`, `/api/v1/inventory`, and `/api/v1/orders` GET
+
+Apply only the APIM module:
+
+```powershell
+cd infra\terraform\envs\dev
+terraform plan "-target=module.apim" "-out=apim-api.tfplan"
+terraform apply "apim-api.tfplan"
+```
 
 Smoke test from inside the cluster:
 
@@ -69,8 +192,21 @@ Smoke test from inside the cluster:
 az aks command invoke `
   --resource-group rg-logistics-workload-dev `
   --name aks-logistics-dev `
-  --command "kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- curl -k https://<internal-host>/health"
+  --command "kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- curl -s http://10.2.12.10/health"
 ```
+
+Then test through APIM from the same pod:
+
+```powershell
+az aks command invoke `
+  --resource-group rg-logistics-workload-dev `
+  --name aks-logistics-dev `
+  --command "kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- curl -k https://<apim-hostname>/logistics/health"
+```
+
+Expected: `{"status":"ok"}`.
+
+APIM JWT policy is not added yet; this checkpoint validates the private network path only. The API itself still enforces JWT on protected routes.
 
 Stop after 5B and reply `5B done`.
 

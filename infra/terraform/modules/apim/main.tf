@@ -56,8 +56,54 @@ resource "azapi_update_resource" "network" {
   depends_on = [azurerm_private_endpoint.this]
 }
 
+resource "azurerm_api_management_api" "logistics" {
+  name                  = "logistics-api"
+  resource_group_name   = var.resource_group_name
+  api_management_name   = azurerm_api_management.this.name
+  revision              = "1"
+  display_name          = "Logistics API"
+  path                  = "logistics"
+  protocols             = ["https"]
+  service_url           = var.backend_service_url
+  subscription_required = false
+}
+
+resource "azurerm_api_management_api_operation" "health" {
+  api_name            = azurerm_api_management_api.logistics.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  operation_id        = "health"
+  display_name        = "Health"
+  method              = "GET"
+  url_template        = "/health"
+}
+
+resource "azurerm_api_management_api_operation" "inventory" {
+  api_name            = azurerm_api_management_api.logistics.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  operation_id        = "list-inventory"
+  display_name        = "List inventory"
+  method              = "GET"
+  url_template        = "/api/v1/inventory"
+}
+
+resource "azurerm_api_management_api_operation" "orders" {
+  api_name            = azurerm_api_management_api.logistics.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  operation_id        = "list-orders"
+  display_name        = "List orders"
+  method              = "GET"
+  url_template        = "/api/v1/orders"
+}
+
 output "id" {
   value = azurerm_api_management.this.id
+}
+
+output "api_id" {
+  value = azurerm_api_management_api.logistics.id
 }
 
 output "gateway_url" {

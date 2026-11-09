@@ -261,6 +261,8 @@ Private services:
 | ACR `TasksOperationsNotAllowed` | ACR Tasks is disabled/not permitted for this subscription | Build locally with `docker build` + `docker push`; do not request ACR Tasks. |
 | ACR `az acr login` 403 / `CONNECTIVITY_REFRESH_TOKEN_ERROR` | Hosted agent cannot reach a private-only ACR, `azureADAuthenticationAsArmPolicy` is disabled, or identity lacks AcrPush | Check `publicNetworkAccess`, AAD-ARM policy, and AcrPush. Decision for this lab: temporary public ACR access (ADR-0015); private endpoint remains. |
 | Trivy zlib1g CVE-2026-76844 / CVE-2026-85091 | Base image OS package is older than the Debian security update | Runtime Dockerfile upgrades `zlib1g` after the base image; rebuild and rescan. Do not add a blanket Trivy ignore. |
+| AKS image pull `EOF` from private ACR | AKS nodes route 0.0.0.0/0 to firewall; no network rule allowed 10.2/16 → ACR private endpoint in 10.4.2.0/24:443 | Add `acr-private-endpoint` firewall network rule, apply it, restart the pod. Verify private DNS resolves ACR to the private IP and kubelet has AcrPull. |
+| Pod `CreateContainerConfigError` | Common cause: `runAsNonRoot` with a non-numeric image user (`USER app`), or a missing Secret/ConfigMap/ServiceAccount | Build the image with numeric UID/GID `10001:10001` and set matching `runAsUser`/`runAsGroup`/`fsGroup`; inspect `kubectl describe pod` for the exact event. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -268,7 +270,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 5 checkpoint 5A - complete the first green build.** Day 4 is complete except the first successful Azure DevOps image build.
+Current checkpoint: **Day 5 checkpoint 5B - deploy AKS chart and wire APIM.** 5A and 5B-0 are complete. The Helm chart and APIM API resources are added; deploy and smoke-test pending.
 
 ### Day 4 completed
 
@@ -282,7 +284,23 @@ Current checkpoint: **Day 5 checkpoint 5A - complete the first green build.** Da
 
 ### Day 4 open item
 
-The first green Azure DevOps build is still pending. Current blocker: Trivy zlib1g CVEs; Dockerfile now upgrades `zlib1g` after pulling the base image. Rebuild and confirm the image digest.
+Closed: the first green Azure DevOps build is complete; zlib1g CVEs were fixed in the Dockerfile.
+
+### Day 5 blocker
+
+5B-0 code/Terraform added:
+
+- `pyodbc`, `azure-identity`, ODBC driver 18 in the runtime image.
+- `app/db.py` uses `DefaultAzureCredential` for `mssql+pyodbc`.
+- `infra/terraform/modules/api-identity/` creates UAMI + AKS federated credential + Blob/Service Bus roles.
+- `deploy/helm/logistics-api/` has Deployment, ServiceAccount, internal LoadBalancer Service, schema-init Job, and `values-dev.example.yaml`.
+- Helm `lint` and `template` pass; default image tag `0.1.0` prevents an empty-tag YAML parse error. Override with the immutable build tag or digest.
+- Service uses internal LoadBalancer IP `10.2.12.10` in `snet-aks-ingress`.
+- APIM module creates API `logistics-api`, path `logistics`, backend `http://10.2.12.10:80`, and GET operations for health/inventory/orders.
+- SQL schema init is currently `Base.metadata.create_all`; Alembic is still a production gap.
+- Managed Redis is `Encrypted` with Entra-only auth, port `10000`; `REDIS_HOST` is hostname only and `REDIS_PORT=10000`. The app does not yet use `redis-entraid` or a Redis user assignment.
+
+5B-0 manual step: apply `module.api_identity`, then create the contained Azure SQL user for the API workload identity and grant `db_datareader`, `db_datawriter`, and migration schema rights. SQL has no public access, so use a temporary VNet jumpbox/pod or a temporary firewall exception that is reverted immediately.
 
 ### Day 3B deferred gaps
 
