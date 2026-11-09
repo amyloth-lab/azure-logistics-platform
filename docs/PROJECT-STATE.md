@@ -258,6 +258,7 @@ Private services:
 | `Permission being assigned already exists on the object` | App role assignment already exists outside Terraform state, often from portal or a partial apply | Remove all app-role assignments for that user on `logistics-api`, then re-apply; or import the existing assignment. Do not create duplicates. |
 | Build `pip-audit`: `logistics-api Dependency not found on PyPI` | `pip-audit` audits the editable local project as a PyPI dependency; `--skip-editable` can still exit non-zero | Generate a requirements file with `pip freeze --exclude-editable` and audit that file; do not skip the audit. |
 | `PYSEC-2026-1845` pytest 8.4.2 | Dev dependency pinned below the fixed release | Pin `pytest>=9.0.3,<10`; remove unused `pytest-asyncio`. |
+| ACR `TasksOperationsNotAllowed` | ACR Tasks is disabled/not permitted for this subscription | Build locally with `docker build` + `docker push`; do not request ACR Tasks. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -295,7 +296,7 @@ Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps r
 
 ### Day 4 checkpoint 4D - code added, run pending
 
-- `pipelines/build.yml`: test/lint, pip-audit (frozen requirements, editable project excluded), Bandit, Gitleaks, ACR build, Trivy scan, immutable image reference artifact. No deployment.
+- `pipelines/build.yml`: test/lint, pip-audit (frozen requirements, editable project excluded), Bandit, Gitleaks, local Docker build + push to ACR, Trivy scan, immutable image reference artifact. No deployment and no ACR Tasks.
 - `Dockerfile`: multi-stage, non-root, Python 3.12.
 - Dev dependency `pytest>=9.0.3` fixes PYSEC-2026-1845; unused `pytest-asyncio` removed.
 - Build pipeline requires variable group `vg-logistics-build` with `ACR_NAME`, `azureServiceConnection`, and an AcrPush service connection. Not run yet.

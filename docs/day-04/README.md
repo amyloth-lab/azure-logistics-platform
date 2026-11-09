@@ -505,9 +505,11 @@ Stages:
    - Bandit
    - Gitleaks
 3. **Build**
-   - `az acr build` with immutable tag `$(Build.BuildId)-$(Build.SourceVersion)`
-   - Trivy image scan
+   - local `docker build` + `docker push` to ACR with immutable tag `$(Build.BuildId)-$(Build.SourceVersion)`
+   - Trivy image scan on the local image
    - publish image digest
+
+ACR Tasks is intentionally not used. This subscription returns `TasksOperationsNotAllowed` for `az acr build`; local Docker build avoids that restriction while keeping the AcrPush-only identity.
 4. **No deploy**
 
 Azure DevOps prerequisites:

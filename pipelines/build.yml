@@ -103,17 +103,18 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 set -euo pipefail
-                az acr build \
-                  --registry "$(ACR_NAME)" \
-                  --image "$(imageRepository):$(imageTag)" \
-                  --file Dockerfile \
-                  .
+                image="$(ACR_NAME).azurecr.io/$(imageRepository):$(imageTag)"
+
+                az acr login --name "$(ACR_NAME)"
+                docker build --pull --file Dockerfile --tag "$image" .
+                docker push "$image"
 
                 digest=$(az acr repository show \
                   --name "$(ACR_NAME)" \
                   --image "$(imageRepository):$(imageTag)" \
                   --query digest -o tsv)
 
+                test -n "$digest"
                 echo "$(ACR_NAME).azurecr.io/$(imageRepository)@${digest}" > image-ref.txt
                 echo "IMAGE_DIGEST=${digest}" >> "$(Build.ArtifactStagingDirectory)/build.env"
 
@@ -125,8 +126,6 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 set -euo pipefail
-                az acr login --name "$(ACR_NAME)"
-                docker pull "$(ACR_NAME).azurecr.io/$(imageRepository):$(imageTag)"
                 docker run --rm \
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   aquasec/trivy:0.58.1 image \
