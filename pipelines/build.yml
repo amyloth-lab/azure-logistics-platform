@@ -1,0 +1,145 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - docs/*
+      - diagrams/*
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: vg-logistics-build
+  - name: pythonVersion
+    value: "3.12"
+  - name: imageRepository
+    value: logistics-api
+  - name: imageTag
+    value: "$(Build.BuildId)-$(Build.SourceVersion)"
+
+stages:
+  - stage: Test
+    displayName: Test and lint
+    jobs:
+      - job: Python
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: $(pythonVersion)
+              addToPath: true
+
+          - script: |
+              python -m pip install --upgrade pip
+              python -m pip install -e ".[dev]"
+            displayName: Install Python dependencies
+
+          - script: |
+              pytest --junitxml=test-results.xml
+            displayName: Run pytest
+
+          - script: ruff check .
+            displayName: Ruff
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: test-results.xml
+              failTaskOnFailedTests: true
+
+  - stage: Security
+    displayName: Security checks
+    dependsOn: Test
+    jobs:
+      - job: SourceAndDependencies
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: $(pythonVersion)
+
+          - script: |
+              python -m pip install --upgrade pip
+              python -m pip install -e ".[dev]" pip-audit bandit
+            displayName: Install security tools
+
+          - script: pip-audit
+            displayName: Dependency audit
+
+          - script: bandit -q -r app
+            displayName: Bandit source scan
+
+          - script: |
+              docker run --rm \
+                -v "$(Build.SourcesDirectory):/repo" \
+                zricethezav/gitleaks:v8.21.2 detect \
+                --source=/repo --no-git --redact --exit-code 1
+            displayName: Gitleaks secret scan
+
+  - stage: Build
+    displayName: Build and push immutable image
+    dependsOn:
+      - Test
+      - Security
+    jobs:
+      - job: AcrBuild
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: AzureCLI@2
+            displayName: Build and push to ACR
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                az acr build \
+                  --registry "$(ACR_NAME)" \
+                  --image "$(imageRepository):$(imageTag)" \
+                  --file Dockerfile \
+                  .
+
+                digest=$(az acr repository show \
+                  --name "$(ACR_NAME)" \
+                  --image "$(imageRepository):$(imageTag)" \
+                  --query digest -o tsv)
+
+                echo "$(ACR_NAME).azurecr.io/$(imageRepository)@${digest}" > image-ref.txt
+                echo "IMAGE_DIGEST=${digest}" >> "$(Build.ArtifactStagingDirectory)/build.env"
+
+          - task: AzureCLI@2
+            displayName: Scan image with Trivy
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                az acr login --name "$(ACR_NAME)"
+                docker pull "$(ACR_NAME).azurecr.io/$(imageRepository):$(imageTag)"
+                docker run --rm \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  aquasec/trivy:0.58.1 image \
+                  --exit-code 1 \
+                  --ignore-unfixed \
+                  --severity HIGH,CRITICAL \
+                  "$(ACR_NAME).azurecr.io/$(imageRepository):$(imageTag)"
+
+          - publish: image-ref.txt
+            artifact: image-ref
+
+          - publish: $(Build.ArtifactStagingDirectory)/build.env
+            artifact: build-metadata
+
+          - script: |
+              echo "Build artifact: $(ACR_NAME).azurecr.io/$(imageRepository):$(imageTag)"
+              echo "This pipeline does not deploy. Deployment belongs to release.yml."
+            displayName: Record build output

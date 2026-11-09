@@ -7,6 +7,12 @@ MANAGER = ["Inventory.Reader", "Inventory.Contributor", "Logistics.Manager"]
 
 def test_inventory_requires_auth(client: TestClient) -> None:
     assert client.get("/api/v1/inventory").status_code == 401
+    assert client.get("/api/v1/inventory?access_token=not-a-header").status_code == 401
+
+
+def test_inventory_role_is_required(client: TestClient, as_user) -> None:
+    as_user("user-a", [])
+    assert client.get("/api/v1/inventory").status_code == 403
 
 
 def test_inventory_crud_and_manager_delete(client: TestClient, as_user) -> None:
@@ -21,6 +27,9 @@ def test_inventory_crud_and_manager_delete(client: TestClient, as_user) -> None:
 
     as_user("user-b", READER)
     assert client.get("/api/v1/inventory/SKU-1").status_code == 200
+    assert client.delete("/api/v1/inventory/SKU-1").status_code == 403
+
+    as_user("contributor", CONTRIBUTOR)
     assert client.delete("/api/v1/inventory/SKU-1").status_code == 403
 
     as_user("manager", MANAGER)

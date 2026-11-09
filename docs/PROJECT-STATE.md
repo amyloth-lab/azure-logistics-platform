@@ -263,7 +263,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 4 checkpoint 4B - Entra JWT validation code added; app registration/config pending.** Day 3B is complete with documented gaps.
+Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps run pending.** 4A, 4B, and 4C are complete; Day 3B remains complete with documented gaps.
 
 ### Day 4 checkpoint 4A - complete
 
@@ -273,19 +273,29 @@ Current checkpoint: **Day 4 checkpoint 4B - Entra JWT validation code added; app
 - Python `>=3.12,<3.14`; dev extras include `httpx2`.
 - Do not create `apps/api`.
 
-### Day 4 checkpoint 4B - code added; Entra apply pending
+### Day 4 checkpoint 4B - complete
 
 - `app/security.py` validates Entra JWT: RS256, JWKS cache, `iss`, `aud`, `exp`, `iat`, `tid`, `oid`/`sub`, `roles`.
 - `Authorization: Bearer` required unless the local `DEV_AUTH_ENABLED` shim is explicitly enabled.
-- `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`, `ENTRA_ISSUER`, `ENTRA_JWKS_URL` added to settings and `.env.example`.
-- `tests/test_token_validation.py` covers valid, expired, wrong audience, wrong tenant, missing `oid`, missing/malformed header.
-- `infra/terraform/modules/entra/` creates the API app registration, `access_as_user` scope, six app roles, service principal, and five role assignments to the Terraform caller.
-- It also creates the public client `logistics-cli`, redirect URI `http://localhost`, delegated `access_as_user` permission, and a delegated permission grant.
-- `azuread` provider added; `terraform validate` passes.
-- Apply only `-target=module.entra`; no real token has been validated yet.
-- Do not use Azure CLI to request the custom API token: `AADSTS650057` is expected. Use `scripts/get_token.py` (MSAL device-code) with `ENTRA_CLIENT_ID` = `entra_cli_client_id`.
-- Entra app registration is Terraform-managed; do not create a duplicate app in the portal.
-- If the browser says the user has no access, the app-role assignment went to the Terraform caller rather than the signing-in user. Set `entra_role_assignment_object_id` to the user's Entra object ID and re-apply `-target=module.entra`.
+- `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`, `ENTRA_ISSUER`, `ENTRA_JWKS_URL` in settings and `.env.example`.
+- `infra/terraform/modules/entra/` creates the API app registration, `access_as_user` scope, six app roles, service principal, and role assignments.
+- It also creates `logistics-cli` (public client, `http://localhost`, delegated `access_as_user`, delegated grant).
+- Real user token acquired via `scripts/get_token.py` (MSAL device code); Azure CLI cannot request this custom API.
+- App role assignment may target `entra_role_assignment_object_id`; tenant member account required.
+- Entra app registration is Terraform-managed; do not create a duplicate in the portal.
+
+### Day 4 checkpoint 4C - complete
+
+- 18 tests passed with `.venv\Scripts\python.exe -m pytest -q`.
+- Ruff passes with `.venv\Scripts\ruff.exe check .`.
+- Tests include role-required 403, contributor delete 403, query-token rejection, non-order role 403, cross-user update 404, manager sees all orders.
+- `ruff` excludes `diagrams/` and `scripts/build_backlog_csv.py` because they contain generated/long data lines; application/test code is still checked.
+
+### Day 4 checkpoint 4D - code added, run pending
+
+- `pipelines/build.yml`: test/lint, pip-audit, Bandit, Gitleaks, ACR build, Trivy scan, immutable image reference artifact. No deployment.
+- `Dockerfile`: multi-stage, non-root, Python 3.12.
+- Build pipeline requires variable group `vg-logistics-build` with `ACR_NAME`, `azureServiceConnection`, and an AcrPush service connection. Not run yet.
 
 ### Day 3B completed
 

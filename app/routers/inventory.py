@@ -31,7 +31,10 @@ def get_inventory(
 ) -> InventoryItem:
     item = db.scalar(select(InventoryItem).where(InventoryItem.sku == sku))
     if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inventory item not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inventory item not found",
+        )
     return item
 
 
@@ -63,7 +66,10 @@ def update_inventory(
 ) -> InventoryItem:
     item = db.scalar(select(InventoryItem).where(InventoryItem.sku == sku))
     if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inventory item not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inventory item not found",
+        )
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(item, field, value)
     db.commit()
@@ -79,6 +85,9 @@ def delete_inventory(
 ) -> None:
     item = db.scalar(select(InventoryItem).where(InventoryItem.sku == sku))
     if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inventory item not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inventory item not found",
+        )
     db.delete(item)
     db.commit()

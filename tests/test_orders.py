@@ -27,6 +27,33 @@ def test_user_cannot_read_another_users_order(client: TestClient, as_user) -> No
     assert client.get(f"/api/v1/orders/{order_id}").status_code == 200
 
 
+def test_non_order_role_is_forbidden(client: TestClient, as_user) -> None:
+    as_user("partner", ["Partner.Webhook"])
+    assert client.get("/api/v1/orders").status_code == 403
+
+
+def test_user_cannot_update_another_users_order(client: TestClient, as_user) -> None:
+    as_user("user-a", USER)
+    created = client.post("/api/v1/orders", json=_order_payload())
+    order_id = created.json()["id"]
+
+    as_user("user-b", USER)
+    assert (
+        client.patch(f"/api/v1/orders/{order_id}", json={"status": "cancelled"}).status_code
+        == 404
+    )
+
+
+def test_manager_sees_all_orders(client: TestClient, as_user) -> None:
+    as_user("user-a", USER)
+    assert client.post("/api/v1/orders", json=_order_payload()).status_code == 201
+    as_user("user-b", USER)
+    assert client.post("/api/v1/orders", json=_order_payload()).status_code == 201
+
+    as_user("manager", MANAGER)
+    assert len(client.get("/api/v1/orders").json()) == 2
+
+
 def test_user_cannot_delete_order_but_manager_can(client: TestClient, as_user) -> None:
     as_user("user-a", USER)
     created = client.post("/api/v1/orders", json=_order_payload())

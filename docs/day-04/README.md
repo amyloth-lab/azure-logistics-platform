@@ -1,6 +1,6 @@
 # Day 4 - FastAPI, Entra auth, tests, build pipeline
 
-**Status:** 4A complete; 4B code added, app registration/config pending.
+**Status:** 4A, 4B, and 4C complete; 4D build pipeline added, Azure DevOps run pending.
 **Time:** 4-5 hours
 **Goal:** Build the Python logistics API, enforce Entra authentication and RBAC, prove it with tests, and produce an immutable build artifact.
 
@@ -461,25 +461,30 @@ Stop after 4B and reply `4B done`.
 
 # Checkpoint 4C - Tests
 
-Required cases:
+Tests are in place and cover:
 
-- No token -> 401.
+- No token / query-string token -> 401.
 - Expired token -> 401.
-- Wrong audience -> 401.
-- Normal user cannot delete inventory -> 403.
+- Wrong audience / tenant -> 401.
+- Missing `oid`, missing header, malformed header -> 401.
+- Missing app role -> 403.
+- Normal user and contributor cannot delete inventory -> 403.
 - Manager can delete inventory -> 204.
-- Normal user cannot read another user's order -> 404.
-- Manager can read another user's order -> 200.
-- Normal user can read own order -> 200.
+- Non-order role cannot list orders -> 403.
+- Normal user cannot read/update another user's order -> 404.
+- Manager can read all orders.
+- Normal user can read own order.
 
-Use dependency overrides for the token verifier; do not call Entra in unit tests.
+Expected count: **18 passed**.
 
 Run:
 
 ```powershell
-pytest -q
-ruff check .
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\ruff.exe check .
 ```
+
+Do not call Entra in unit tests; the JWT tests use a local RSA key and fake JWKS client.
 
 Stop after 4C and reply `4C done`.
 
@@ -487,31 +492,40 @@ Stop after 4C and reply `4C done`.
 
 # Checkpoint 4D - Build pipeline
 
-Create `pipelines/build.yml` in Azure DevOps.
+**Added:** `pipelines/build.yml` and `Dockerfile`.
 
 Stages:
 
 1. **Test**
    - Python 3.12
-   - `pip install`
-   - `pytest`
+   - `pip install -e ".[dev]"`
+   - `pytest` with JUnit results
    - `ruff`
 2. **Security**
-   - dependency audit
-   - secret scan
-   - container scan after build
+   - `pip-audit`
+   - Bandit
+   - Gitleaks
 3. **Build**
-   - build image tagged with `$(Build.BuildId)` and Git SHA
-   - push to ACR using the build identity
-   - do not deploy
-4. **Publish**
-   - publish image digest and test results as artifacts
+   - `az acr build` with immutable tag `$(Build.BuildId)-$(Build.SourceVersion)`
+   - Trivy image scan
+   - publish image digest
+4. **No deploy**
+
+Azure DevOps prerequisites:
+
+- Variable group `vg-logistics-build` with:
+  - `ACR_NAME`
+  - `azureServiceConnection`
+- Service connection using an identity with **AcrPush**, not Contributor/Owner.
+- ACR Premium and ACR Tasks enabled.
+
+Run the pipeline from Azure DevOps after committing. The build must not deploy.
 
 Rules:
 
 - Build pipeline has **AcrPush**, not deployment rights.
 - Release pipeline has deployment rights, not ACR admin.
-- No secrets in YAML; use variable groups/key vault.
+- No secrets in YAML; use variable groups/Key Vault.
 - Image tag is immutable; do not use `latest` for deployment.
 
 Stop after 4D and reply `4D done`.

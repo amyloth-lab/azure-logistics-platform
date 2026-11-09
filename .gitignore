@@ -79,3 +79,8 @@ scratch/
 tmp/
 .tmp-*/
 *.tmp
+
+# Local Python artifacts
+*.db
+*.egg-info/
+
