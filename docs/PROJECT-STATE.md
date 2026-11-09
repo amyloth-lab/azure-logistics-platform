@@ -257,6 +257,7 @@ Private services:
 | `AADSTS530035` for `whrsoft@gmail.com` or `manager@...` | Personal/Gmail account is not a member/guest, or a Conditional Access policy blocks the unregistered device | Check the sign-in log's Conditional Access tab by request/correlation ID. If a policy requires a compliant/Entra-joined device, exclude the lab user from that specific policy or use a compliant device. Also verify the user is assigned to `logistics-api` if assignment is required. |
 | `Permission being assigned already exists on the object` | App role assignment already exists outside Terraform state, often from portal or a partial apply | Remove all app-role assignments for that user on `logistics-api`, then re-apply; or import the existing assignment. Do not create duplicates. |
 | Build `pip-audit`: `logistics-api Dependency not found on PyPI` | `pip-audit` audits the editable local project as a PyPI dependency; `--skip-editable` can still exit non-zero | Generate a requirements file with `pip freeze --exclude-editable` and audit that file; do not skip the audit. |
+| `PYSEC-2026-1845` pytest 8.4.2 | Dev dependency pinned below the fixed release | Pin `pytest>=9.0.3,<10`; remove unused `pytest-asyncio`. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -271,7 +272,7 @@ Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps r
 - Canonical layout: root `app/` package, root `tests/`, root `pipelines/`, root `pyproject.toml`.
 - FastAPI health/inventory/orders, SQLAlchemy models, Pydantic schemas.
 - Tests cover health, inventory CRUD, manager delete, order ownership, manager access.
-- Python `>=3.12,<3.14`; dev extras include `httpx2`.
+- Python `>=3.12,<3.14`; dev extras include `httpx2` and `pytest>=9.0.3` (PYSEC-2026-1845 fix). `pytest-asyncio` removed because tests are synchronous.
 - Do not create `apps/api`.
 
 ### Day 4 checkpoint 4B - complete
@@ -294,8 +295,9 @@ Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps r
 
 ### Day 4 checkpoint 4D - code added, run pending
 
-- `pipelines/build.yml`: test/lint, pip-audit, Bandit, Gitleaks, ACR build, Trivy scan, immutable image reference artifact. No deployment.
+- `pipelines/build.yml`: test/lint, pip-audit (frozen requirements, editable project excluded), Bandit, Gitleaks, ACR build, Trivy scan, immutable image reference artifact. No deployment.
 - `Dockerfile`: multi-stage, non-root, Python 3.12.
+- Dev dependency `pytest>=9.0.3` fixes PYSEC-2026-1845; unused `pytest-asyncio` removed.
 - Build pipeline requires variable group `vg-logistics-build` with `ACR_NAME`, `azureServiceConnection`, and an AcrPush service connection. Not run yet.
 
 ### Day 3B completed

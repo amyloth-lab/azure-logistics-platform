@@ -111,8 +111,7 @@ Use:
 - `pyjwt[crypto]`
 - `httpx2>=2.0` (Starlette TestClient dependency; `httpx` alone triggers a deprecation warning)
 - `redis`
-- `pytest`
-- `pytest-asyncio`
+- `pytest>=9.0.3` (PYSEC-2026-1845 fix)
 - `ruff`
 
 Pin versions in `pyproject.toml`. Do not use floating ranges for the final build.
