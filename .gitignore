@@ -84,4 +84,5 @@ tmp/
 *.db
 *.egg-info/
 requirements-audit.txt
+deploy/helm/logistics-api/values-dev.yaml
 

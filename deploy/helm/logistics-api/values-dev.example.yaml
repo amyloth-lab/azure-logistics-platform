@@ -1,0 +1,30 @@
+image:
+  repository: acrlogisticsdevpc1cwg.azurecr.io/logistics-api
+  tag: "<build-id>-<source-version>"
+  digest: ""
+
+serviceAccount:
+  name: logistics-api
+  clientId: "<api_identity_client_id>"
+  tenantId: "<tenant-id>"
+
+service:
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: snet-aks-ingress
+  loadBalancerIP: "10.2.12.10"
+
+env:
+  APP_ENV: prod
+  LOG_LEVEL: INFO
+  ENTRA_TENANT_ID: "<tenant-id>"
+  ENTRA_AUDIENCE: api://logistics-api
+  ENTRA_ISSUER: "https://login.microsoftonline.com/<tenant-id>/v2.0"
+  ENTRA_JWKS_URL: "https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys"
+  DATABASE_URL: "mssql+pyodbc://sql-logistics-dev-<suffix>.database.windows.net/sqldb-logistics?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
+  REDIS_HOST: "redis-logistics-dev-<suffix>.australiaeast.redis.azure.net"
+  REDIS_PORT: "10000"
+  SERVICEBUS_NAMESPACE: "<namespace>.servicebus.windows.net"
+  SERVICEBUS_TOPIC: order-events
+  BLOB_ACCOUNT_URL: "https://<storage-account>.blob.core.windows.net"
+  BLOB_CONTAINER: documents

@@ -1,0 +1,56 @@
+replicaCount: 2
+
+image:
+  repository: acrlogisticsdevpc1cwg.azurecr.io/logistics-api
+  # Override with the immutable build tag or digest at deploy time.
+  tag: "0.1.0"
+  digest: ""
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  name: logistics-api
+  clientId: ""
+  tenantId: ""
+
+podAnnotations: {}
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: snet-aks-ingress
+  loadBalancerIP: "10.2.12.10"
+
+env:
+  APP_ENV: prod
+  LOG_LEVEL: INFO
+  ENTRA_TENANT_ID: ""
+  ENTRA_AUDIENCE: api://logistics-api
+  ENTRA_ISSUER: ""
+  ENTRA_JWKS_URL: ""
+  DATABASE_URL: ""
+  REDIS_HOST: ""
+  REDIS_PORT: "10000"
+  SERVICEBUS_NAMESPACE: ""
+  SERVICEBUS_TOPIC: order-events
+  BLOB_ACCOUNT_URL: ""
+  BLOB_CONTAINER: documents
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+migrationJob:
+  enabled: true
+  backoffLimit: 3
+
+probes:
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 10

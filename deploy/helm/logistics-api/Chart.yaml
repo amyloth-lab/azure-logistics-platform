@@ -1,0 +1,6 @@
+apiVersion: v2
+name: logistics-api
+description: Inventory and orders API for the logistics platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

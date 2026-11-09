@@ -39,6 +39,9 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY --chown=10001:10001 app ./app
 
+# Fail the build early if the Azure SQL/client dependencies are missing.
+RUN python -c "import pyodbc, azure.identity; print('sql dependencies ok')"
+
 USER 10001:10001
 EXPOSE 8000
 

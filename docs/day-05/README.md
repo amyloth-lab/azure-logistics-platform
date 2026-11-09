@@ -158,6 +158,14 @@ az aks command invoke `
 
 The image must use a numeric UID/GID because `runAsNonRoot: true` cannot verify a non-numeric `USER app`. Rebuild with UID/GID `10001:10001`.
 
+If the migration Job fails with `ModuleNotFoundError: No module named 'pyodbc'`, the deployed image is older than the Dockerfile change. Rebuild, update the digest in `values-dev.yaml`, and verify:
+
+```bash
+docker run --rm <image> python -c "import pyodbc, azure.identity; print('ok')"
+```
+
+The Dockerfile now fails the build if either module is missing.
+
 Verify the ACR private IP and DNS:
 
 ```powershell
