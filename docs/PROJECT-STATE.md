@@ -259,6 +259,8 @@ Private services:
 | Build `pip-audit`: `logistics-api Dependency not found on PyPI` | `pip-audit` audits the editable local project as a PyPI dependency; `--skip-editable` can still exit non-zero | Generate a requirements file with `pip freeze --exclude-editable` and audit that file; do not skip the audit. |
 | `PYSEC-2026-1845` pytest 8.4.2 | Dev dependency pinned below the fixed release | Pin `pytest>=9.0.3,<10`; remove unused `pytest-asyncio`. |
 | ACR `TasksOperationsNotAllowed` | ACR Tasks is disabled/not permitted for this subscription | Build locally with `docker build` + `docker push`; do not request ACR Tasks. |
+| ACR `az acr login` 403 / `CONNECTIVITY_REFRESH_TOKEN_ERROR` | Hosted agent cannot reach a private-only ACR, `azureADAuthenticationAsArmPolicy` is disabled, or identity lacks AcrPush | Check `publicNetworkAccess`, AAD-ARM policy, and AcrPush. Decision for this lab: temporary public ACR access (ADR-0015); private endpoint remains. |
+| Trivy zlib1g CVE-2026-76844 / CVE-2026-85091 | Base image OS package is older than the Debian security update | Runtime Dockerfile upgrades `zlib1g` after the base image; rebuild and rescan. Do not add a blanket Trivy ignore. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -294,11 +296,19 @@ Current checkpoint: **Day 4 checkpoint 4D - build pipeline added; Azure DevOps r
 - Tests include role-required 403, contributor delete 403, query-token rejection, non-order role 403, cross-user update 404, manager sees all orders.
 - `ruff` excludes `diagrams/` and `scripts/build_backlog_csv.py` because they contain generated/long data lines; application/test code is still checked.
 
+### Cost control
+
+- `scripts/stop-lab.ps1` — stops AKS and pauses serverless SQL.
+- `scripts/start-lab.ps1` — starts AKS and resumes paused SQL.
+- `docs/cost-control.md` — what can and cannot be stopped; why `terraform destroy` is not an overnight pause.
+- Fixed-cost services continue billing: APIM, Firewall, Bastion, Service Bus Premium, ACR Premium, Redis, public IPs.
+
 ### Day 4 checkpoint 4D - code added, run pending
 
 - `pipelines/build.yml`: test/lint, pip-audit (frozen requirements, editable project excluded), Bandit, Gitleaks, local Docker build + push to ACR, Trivy scan, immutable image reference artifact. No deployment and no ACR Tasks.
 - `Dockerfile`: multi-stage, non-root, Python 3.12.
 - Dev dependency `pytest>=9.0.3` fixes PYSEC-2026-1845; unused `pytest-asyncio` removed.
+- ACR public access is temporarily enabled (`acr_public_network_access_enabled = true`) so Microsoft-hosted agents can push. Private endpoint and admin-disabled setting remain. See ADR-0015.
 - Build pipeline requires variable group `vg-logistics-build` with `ACR_NAME`, `azureServiceConnection`, and an AcrPush service connection. Not run yet.
 
 ### Day 3B completed

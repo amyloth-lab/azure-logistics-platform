@@ -10,10 +10,16 @@ COPY pyproject.toml ./
 COPY app ./app
 RUN pip install --prefix=/install .
 
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
+
+# Pull Debian security updates, including zlib1g, into the final image.
+# Rebuild the image regularly; do not rely on the floating base tag alone.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade zlib1g \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
