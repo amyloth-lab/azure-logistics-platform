@@ -166,6 +166,8 @@ docker run --rm <image> python -c "import pyodbc, azure.identity; print('ok')"
 
 The Dockerfile now fails the build if either module is missing.
 
+If pyodbc returns `FA005` about Access Token with Authentication/Integrated Security/User/Password, the SQLAlchemy URL path is adding `Trusted_Connection=Yes`. The app now builds the ODBC connection string explicitly and uses a connection creator with only the access-token attribute.
+
 Verify the ACR private IP and DNS:
 
 ```powershell

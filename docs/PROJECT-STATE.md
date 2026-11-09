@@ -264,6 +264,7 @@ Private services:
 | AKS image pull `EOF` from private ACR | AKS nodes route 0.0.0.0/0 to firewall; no network rule allowed 10.2/16 → ACR private endpoint in 10.4.2.0/24:443 | Add `acr-private-endpoint` firewall network rule, apply it, restart the pod. Verify private DNS resolves ACR to the private IP and kubelet has AcrPull. |
 | Pod `CreateContainerConfigError` | Common cause: `runAsNonRoot` with a non-numeric image user (`USER app`), or a missing Secret/ConfigMap/ServiceAccount | Build the image with numeric UID/GID `10001:10001` and set matching `runAsUser`/`runAsGroup`/`fsGroup`; inspect `kubectl describe pod` for the exact event. |
 | Migration Job `ModuleNotFoundError: pyodbc` | The deployed image predates the Azure SQL dependencies, or the values digest is stale | Rebuild after the pyproject/Dockerfile change, update the image digest, and verify the new image with `python -c "import pyodbc, azure.identity"`; the Dockerfile now runs this check. |
+| pyodbc `FA005` cannot use Access Token with Authentication/Integrated Security/User/Password | SQLAlchemy's pyodbc dialect adds `Trusted_Connection=Yes` when the URL has no user; token plus trusted auth is invalid | Build the ODBC connection string explicitly and use `creator=`, without `Trusted_Connection`, `UID`, `PWD`, or `Authentication`. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
