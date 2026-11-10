@@ -40,6 +40,8 @@ REQUIRED = [
     "docs/day-05/README.md",
     "docs/cost-control.md",
     "docs/runbook.md",
+    "docs/deviations.md",
+    "docs/interview-brief.md",
     "scripts/stop-lab.ps1",
     "scripts/start-lab.ps1",
     "infra/terraform/bootstrap/main.tf",

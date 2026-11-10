@@ -1,6 +1,6 @@
 # Day 5 - Release, deployment, observability, cleanup
 
-**Status:** Day 4 closed with one open item: the first green Azure DevOps build.
+**Status:** Complete. Dev build, release, Helm deployment, migration, APIM smoke test, runbook, and cost controls are in place. Production gaps are documented in PROJECT-STATE.
 **Goal:** promote the immutable image to dev AKS, prove the private path, add an approval gate, and leave a runbook.
 
 > Read [PROJECT-STATE.md](../PROJECT-STATE.md) first.

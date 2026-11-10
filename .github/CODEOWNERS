@@ -1,9 +1,9 @@
-# Replace @your-handle with the GitHub user or team that owns this repository.
-# CODEOWNERS makes the reviewer requirement meaningful for security-sensitive paths.
+# The code owner must be a user or team with write access.
+# Add a second trusted maintainer/team; a PR author cannot approve their own PR.
 
-*                       @your-handle
-/.github/               @your-handle
-/docs/adr/              @your-handle
-/infra/                 @your-handle
-/pipelines/             @your-handle
-/app/                   @your-handle
+*                       @amyloth-lab
+/.github/               @amyloth-lab
+/docs/adr/              @amyloth-lab
+/infra/                 @amyloth-lab
+/pipelines/             @amyloth-lab
+/app/                   @amyloth-lab
