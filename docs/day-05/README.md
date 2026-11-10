@@ -280,7 +280,11 @@ Stop after 5C and reply `5C done`.
 
 ### Prod gate
 
-Create an Azure DevOps environment `prod` with an approval check. The release must pause before prod.
+Create an Azure DevOps environment `prod` with an approval check.
+
+This lab does not provision a separate prod AKS/SQL stack, so do not fake a prod deployment. Configure the approval gate now; add the prod deployment stage only when a real prod environment and separate prod identity exist.
+
+The dev release is complete and verified.
 
 ### Observability
 
@@ -296,16 +300,17 @@ Create an Azure DevOps environment `prod` with an approval check. The release mu
 
 ### Runbook
 
-Document:
+Completed in [runbook.md](../runbook.md):
 
+- access and health checks
 - stop/start cost procedure
 - image rollback by digest
-- migration rollback
+- migration failure
 - APIM backend failure
 - AKS node failure
-- SQL failover/restore
+- SQL restore
 - key rotation
-- incident contacts
+- cleanup and incident contacts
 
 ### Cleanup
 

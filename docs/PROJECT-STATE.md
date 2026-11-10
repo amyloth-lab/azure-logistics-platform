@@ -274,7 +274,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 5 checkpoint 5C - release pipeline.** 5A, 5B-0, and 5B are complete: image, Helm deployment, migration, internal Service, APIM path, and `/logistics/health` all work. 5C release automation is next.
+Current checkpoint: **Day 5 checkpoint 5D - prod gate, observability, runbook, cleanup.** 5A, 5B-0, 5B, and 5C are complete: the tag-triggered release deployed the same digest and the APIM smoke test passed.
 
 ### Day 4 completed
 
@@ -304,6 +304,8 @@ Closed: the first green Azure DevOps build is complete; zlib1g CVEs were fixed i
 - 5B verified: Helm revision 2 deployed, deployment 2/2 Ready, migration Job succeeded, direct service `/health` and APIM `/logistics/health` return `{"status":"ok"}`.
 - SQL schema init is currently `Base.metadata.create_all`; Alembic is still a production gap.
 - `pipelines/release.yml` added for tag-triggered dev release using the build `image-ref` artifact and secure `values-dev.yaml`; variable group `vg-logistics-release`.
+- 5C complete: release pipeline deployed the build digest to dev, Helm migration succeeded, and APIM `/logistics/health` passed.
+- Release identity needed both `Azure Kubernetes Service Cluster Admin Role` (runCommand) and `Azure Kubernetes Service RBAC Cluster Admin` (Kubernetes resources).
 - Managed Redis is `Encrypted` with Entra-only auth, port `10000`; `REDIS_HOST` is hostname only and `REDIS_PORT=10000`. The app does not yet use `redis-entraid` or a Redis user assignment.
 
 5B-0 manual step: apply `module.api_identity`, then create the contained Azure SQL user for the API workload identity and grant `db_datareader`, `db_datawriter`, and migration schema rights. SQL has no public access, so use a temporary VNet jumpbox/pod or a temporary firewall exception that is reverted immediately.

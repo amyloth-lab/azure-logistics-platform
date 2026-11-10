@@ -6,7 +6,7 @@ The business capability is deliberately small: **inventory** and **orders** APIs
 
 The engineering capability is deliberately realistic: hub-and-spoke networking, private endpoints, WAF, API Management, AKS, App Service, Azure Functions, Service Bus, Azure SQL, Azure Managed Redis, Blob Storage, Key Vault, Terraform, Ansible, policy, observability, and a software supply-chain gate.
 
-> **Current checkpoint: Day 5 - checkpoint 5C (release pipeline).**
+> **Current checkpoint: Day 5 - checkpoint 5D (prod gate, observability, runbook, cleanup).**
 > Read [PROJECT-STATE.md](docs/PROJECT-STATE.md) first, then [Day 5](docs/day-05/README.md).
 > Day 4 is complete except the first green image build. Day 3B has documented gaps: App Service, the public WAF edge, and the Ansible VM are deferred.
 >
@@ -118,6 +118,7 @@ python diagrams/render_diagrams.py
 │   ├── day-05/
 │   │   └── README.md            # Release, deployment, observability, cleanup
 │   ├── cost-control.md          # Overnight stop/start and destroy guidance
+│   ├── runbook.md               # Operations, rollback, restore, cleanup
 │   └── adr/                     # Architecture Decision Records
 ├── infra/
 │   ├── ansible/                 # configuration management (Day 3+)
