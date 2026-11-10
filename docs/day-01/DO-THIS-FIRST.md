@@ -21,7 +21,7 @@ Work in this order. Do not jump ahead.
 2. Run:
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
+# Run from the repository root
 Get-ChildItem
 ```
 
@@ -79,11 +79,7 @@ code .
 
 VS Code opens the project folder.
 
-If `code` is not recognized, open VS Code manually, choose **File > Open Folder**, and select:
-
-```text
-C:\Users\OEM\Documents\deepseek-harness\default-workspace
-```
+If `code` is not recognized, open VS Code manually, choose **File > Open Folder**, and select the repository root folder.
 
 In VS Code, open **Terminal > New Terminal**. Use this terminal for the rest of the steps.
 

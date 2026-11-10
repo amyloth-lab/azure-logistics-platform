@@ -49,7 +49,7 @@ Those are Day 3B and Day 4.
 ### 2.1 Confirm Day 2
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
+# Run from the repository root
 git status
 git log --oneline -3
 ```
@@ -341,8 +341,7 @@ The real resolution test happens in Day 3B from an AKS debug pod or management V
 ## 9. Commit and tag Day 3A
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
-
+# Run from the repository root
 git status --short
 git check-ignore -v infra\terraform\envs\dev\day3a.tfplan
 git add infra\terraform docs\day-03 README.md scripts\validate_repo.py

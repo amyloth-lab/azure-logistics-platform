@@ -1,6 +1,6 @@
 # Project State - Azure Logistics Platform
 
-**Last updated:** 2026-11-09 (EOD Day 4)
+**Last updated:** 2026-11-10 (project complete)
 **Purpose:** Canonical, compact project memory. Read this first instead of re-reading Day 1/Day 2 documents.
 **Rule:** Update this file at the end of every day. Keep it under ~250 lines. Do not put real subscription IDs, tenant IDs, emails, secrets, or storage keys in it.
 
@@ -78,9 +78,9 @@ This keeps context small and prevents re-solving old errors.
 
 ## 4. Repository and environment
 
-- Repo: `C:\Users\OEM\Documents\deepseek-harness\default-workspace`
+- Repo root: the repository working directory.
 - GitHub remote exists; `main` is the working branch.
-- Terraform: `C:\Users\OEM\AppData\Local\Microsoft\WinGet\Packages\Hashicorp.Terraform_Microsoft.Winget.Source_8wekyb3d8bbwe\terraform.exe`
+- Terraform: `terraform` on PATH.
 - Region: `australiaeast`
 - State RG: `rg-logistics-tfstate`
 - Platform RG: `rg-logistics-platform-dev`
@@ -272,60 +272,47 @@ Private services:
 
 ---
 
-## 9. Current checkpoint and next action
+## 9. Final project status
 
-Current checkpoint: **Day 5 checkpoint 5D - prod gate, observability, runbook, cleanup.** 5A, 5B-0, 5B, and 5C are complete: the tag-triggered release deployed the same digest and the APIM smoke test passed.
+**Course complete. Dev environment validated. Production gaps are documented, not hidden.**
 
-### Day 4 completed
+### Delivered
 
-- 4A: FastAPI `app/` package, inventory/orders, SQLAlchemy, Pydantic; root `tests/`, `pipelines/`, `pyproject.toml`.
-- 4B: Entra JWT validation, `logistics-cli` public client, device-code token script, Terraform app roles/assignments.
-- 4C: 18 tests pass; Ruff passes.
-- 4D code: Dockerfile, build pipeline, pip-audit, Bandit, Gitleaks, local Docker build/push, Trivy.
-- `pytest>=9.0.3` fixes PYSEC-2026-1845.
-- ACR public access is a temporary lab exception (ADR-0015); private endpoint and admin-disabled remain.
-- Cost scripts: `scripts/stop-lab.ps1`, `scripts/start-lab.ps1`; guide `docs/cost-control.md`.
+- Hub-and-spoke network, firewall, Bastion, private DNS, ACR, Key Vault, SQL, Storage, Service Bus Premium, Managed Redis.
+- Private AKS with system/user pools, Entra RBAC, ACR pull, firewall egress.
+- Private APIM Standard v2 with outbound integration and private DNS.
+- Flex Consumption Function App with `Microsoft.App/environments`, private storage, Service Bus role.
+- FastAPI inventory/orders API, Entra JWT validation, manager delete, own-order isolation.
+- 18 tests pass; Ruff clean.
+- Build pipeline: test, pip-audit, Bandit, Gitleaks, local Docker push, Trivy.
+- Helm deployment: 2/2 pods, internal Service `10.2.12.10`, migration Job.
+- APIM path `logistics`; `/logistics/health` returns `{"status":"ok"}`.
+- Tag-triggered release pipeline with immutable digest and APIM smoke test.
+- Runbook, cost-control scripts, ADRs, project state.
 
-### Day 4 open item
+### Known production gaps
 
-Closed: the first green Azure DevOps build is complete; zlib1g CVEs were fixed in the Dockerfile.
+- **App Service** deferred: zero App Service VM quota, ineligible. ADR-0012.
+- **Public WAF edge** deferred: 3 public IP limit; APIM private-only. ADR-0013.
+- **Ansible control VM** deferred: 4/4 Total Regional Cores. ADR-0014.
+- **ACR public access** temporary for hosted build agents. ADR-0015. Disable after final build; production needs a VNet self-hosted agent.
+- **Alembic** not implemented; schema uses `Base.metadata.create_all` in the Helm hook.
+- **Redis** is not used by the app yet; `redis-entraid` and Redis user assignment are pending.
+- **APIM JWT policy** not added; FastAPI validates JWTs, APIM currently only routes.
+- **No public API endpoint**; demo is from AKS/Bastion.
+- **Prod AKS/SQL stack** not provisioned; prod approval environment is configured but no prod deployment.
 
-### Day 5 blocker
+### Operational entry points
 
-5B-0 code/Terraform added:
+- `docs/deviations.md` — every constraint-driven deviation and what must not be claimed
+- `docs/runbook.md`
+- `docs/cost-control.md`
+- `scripts/stop-lab.ps1` / `start-lab.ps1`
+- `pipelines/build.yml`
+- `pipelines/release.yml`
+- `deploy/helm/logistics-api/`
 
-- `pyodbc`, `azure-identity`, ODBC driver 18 in the runtime image.
-- `app/db.py` uses `DefaultAzureCredential` for `mssql+pyodbc`.
-- `infra/terraform/modules/api-identity/` creates UAMI + AKS federated credential + Blob/Service Bus roles.
-- `deploy/helm/logistics-api/` has Deployment, ServiceAccount, internal LoadBalancer Service, schema-init Job, and `values-dev.example.yaml`.
-- Helm `lint` and `template` pass; default image tag `0.1.0` prevents an empty-tag YAML parse error. Override with the immutable build tag or digest.
-- Service uses internal LoadBalancer IP `10.2.12.10` in `snet-aks-ingress`.
-- APIM module creates API `logistics-api`, path `logistics`, backend `http://10.2.12.10:80`, and GET operations for health/inventory/orders.
-- 5B verified: Helm revision 2 deployed, deployment 2/2 Ready, migration Job succeeded, direct service `/health` and APIM `/logistics/health` return `{"status":"ok"}`.
-- SQL schema init is currently `Base.metadata.create_all`; Alembic is still a production gap.
-- `pipelines/release.yml` added for tag-triggered dev release using the build `image-ref` artifact and secure `values-dev.yaml`; variable group `vg-logistics-release`.
-- 5C complete: release pipeline deployed the build digest to dev, Helm migration succeeded, and APIM `/logistics/health` passed.
-- Release identity needed both `Azure Kubernetes Service Cluster Admin Role` (runCommand) and `Azure Kubernetes Service RBAC Cluster Admin` (Kubernetes resources).
-- Managed Redis is `Encrypted` with Entra-only auth, port `10000`; `REDIS_HOST` is hostname only and `REDIS_PORT=10000`. The app does not yet use `redis-entraid` or a Redis user assignment.
-
-5B-0 manual step: apply `module.api_identity`, then create the contained Azure SQL user for the API workload identity and grant `db_datareader`, `db_datawriter`, and migration schema rights. SQL has no public access, so use a temporary VNet jumpbox/pod or a temporary firewall exception that is reverted immediately.
-
-### Day 3B deferred gaps
-
-- App Service: zero App Service VM quota, ineligible. ADR-0012.
-- Public WAF edge: 3 public IP limit; APIM private-only. ADR-0013.
-- Ansible control VM: 4/4 Total Regional Cores. ADR-0014.
-
-No public API endpoint; demo from AKS or a Bastion-connected VM. Do not weaken the private design to compensate.
-
-### Day 5 scope
-
-1. **5A:** green build, immutable digest, scans clean.
-2. **5B:** Helm chart/manifests for AKS, APIM backend, migration job.
-3. **5C:** release pipeline, dev deployment, smoke tests.
-4. **5D:** prod approval gate, observability, runbook, cleanup.
-
-Guide: `docs/day-05/README.md`.
+Do not expose APIM publicly or enable ACR/SQL admin users to compensate for the deferred edge or build-agent limitations.
 
 ---
 

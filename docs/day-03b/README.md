@@ -50,7 +50,8 @@ The configuration passed `terraform validate` in a clean copy without the remote
 ### Apply
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+# Run from the repository root, then:
+cd infra\terraform\envs\dev
 
 Remove-Item aks.tfplan -ErrorAction SilentlyContinue
 terraform init -backend-config=backend.hcl
@@ -168,7 +169,8 @@ This uses `azapi` because the current `azurerm_api_management` resource does not
 ### Apply
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+# Run from the repository root, then:
+cd infra\terraform\envs\dev
 
 Remove-Item apim.tfplan -ErrorAction SilentlyContinue
 terraform init -backend-config=backend.hcl
@@ -275,7 +277,8 @@ Continue with Functions, App Gateway, and Ansible. The partner webhook will be d
 **Apply:**
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+# Run from the repository root, then:
+cd infra\terraform\envs\dev
 
 Remove-Item functions.tfplan -ErrorAction SilentlyContinue
 terraform init -backend-config=backend.hcl

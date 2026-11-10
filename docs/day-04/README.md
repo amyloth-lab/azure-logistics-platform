@@ -172,15 +172,11 @@ Implement:
 
 ## Step 6 - Local test run
 
-Use **Python 3.12 or 3.13**, not 3.15. The DSH bundled interpreter is 3.12:
-
-```text
-C:\Users\OEM\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe
-```
+Use **Python 3.12 or 3.13**, not 3.15. Confirm `python --version` before creating the venv.
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace"
-& "C:\Users\OEM\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe" -m venv .venv
+# Run from the repository root
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 pytest -q
@@ -226,7 +222,8 @@ Prerequisites:
 Apply only the Entra module:
 
 ```powershell
-cd "C:\Users\OEM\Documents\deepseek-harness\default-workspace\infra\terraform\envs\dev"
+# Run from the repository root, then:
+cd infra\terraform\envs\dev
 
 terraform init -backend-config=backend.hcl
 terraform validate
@@ -292,11 +289,7 @@ After applying the Entra module:
 terraform output -raw entra_cli_client_id
 ```
 
-Save `.env` at the repository root:
-
-```text
-C:\Users\OEM\Documents\deepseek-harness\default-workspace\.env
-```
+Save `.env` at the repository root, next to `pyproject.toml`.
 
 Set:
 
