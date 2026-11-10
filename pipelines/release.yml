@@ -8,7 +8,9 @@ pr: none
 resources:
   pipelines:
     - pipeline: build
-      source: logistics-api-build
+      # Must exactly match the Azure DevOps build pipeline display name.
+      # This is normally the repository name when created from build.yml.
+      source: azure-logistics-platform
       trigger:
         tags:
           - "v*"

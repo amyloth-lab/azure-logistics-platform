@@ -232,13 +232,13 @@ Trigger: tag `v*` or manual.
 
 It consumes the **build pipeline artifact** `image-ref` and does not rebuild the image.
 
-Pipeline resource name to match in Azure DevOps:
+Pipeline resource name must match the **build pipeline display name** in Azure DevOps. It is normally the repository name:
 
 ```text
-logistics-api-build
+azure-logistics-platform
 ```
 
-If your build pipeline has another name, change `resources.pipelines[].source`.
+The name is not defined in `build.yml`; it is the UI display name. If your build pipeline was renamed, change `resources.pipelines[].source` to the exact name shown under **Pipelines → Pipelines**.
 
 Variable group:
 
