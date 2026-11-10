@@ -168,6 +168,8 @@ The Dockerfile now fails the build if either module is missing.
 
 If pyodbc returns `FA005` about Access Token with Authentication/Integrated Security/User/Password, the SQLAlchemy URL path is adding `Trusted_Connection=Yes`. The app now builds the ODBC connection string explicitly and uses a connection creator with only the access-token attribute.
 
+If SQL returns `HYT00 Login timeout expired`, the pod is not reaching the SQL private endpoint. AKS traffic goes through the firewall; add the `sql-private-endpoint` rule for `10.2.0.0/16` → `10.3.1.0/24:1433`, apply it, then delete and retry the migration Job. Confirm `sqldb-logistics` resolves to a `10.3.1.x` private IP from the pod.
+
 Verify the ACR private IP and DNS:
 
 ```powershell
@@ -224,26 +226,49 @@ Stop after 5B and reply `5B done`.
 
 ## Checkpoint 5C - Release pipeline
 
-Create `pipelines/release.yml`.
+`pipelines/release.yml` is added.
 
 Trigger: tag `v*` or manual.
 
-Input: the image digest artifact from the build pipeline. Do not rebuild.
+It consumes the **build pipeline artifact** `image-ref` and does not rebuild the image.
 
-Stages:
+Pipeline resource name to match in Azure DevOps:
 
-1. Download and verify the image digest.
-2. Helm lint/template.
-3. Apply the migration job.
-4. Helm upgrade with `--atomic`.
-5. Smoke tests from inside the VNet.
-6. Publish release evidence.
+```text
+logistics-api-build
+```
 
-Identities:
+If your build pipeline has another name, change `resources.pipelines[].source`.
 
-- Build pipeline: AcrPush only.
-- Dev release: AKS deploy + SQL migration rights.
-- Prod release: separate identity and approval.
+Variable group:
+
+```text
+vg-logistics-release
+```
+
+Required variables:
+
+```text
+AKS_RESOURCE_GROUP=rg-logistics-workload-dev
+AKS_CLUSTER_NAME=aks-logistics-dev
+AKS_RELEASE_SERVICE_CONNECTION=<release service connection>
+APIM_HOST=<apim-hostname-without-https>
+VALUES_DEV_SECURE_FILE=values-dev.yaml
+```
+
+Upload the real `values-dev.yaml` as a **secure file** in Azure DevOps Library. Do not commit it.
+
+The release identity needs permission to run `az aks command invoke` on the cluster and to deploy the namespace. Give it only the required AKS scope, not subscription Owner.
+
+The pipeline:
+
+1. Downloads `image-ref`.
+2. Extracts `sha256:...`.
+3. Packages the Helm chart.
+4. Runs `helm upgrade --install ... --atomic`.
+5. Smoke tests `/logistics/health` through APIM.
+
+The migration Job runs as a Helm `pre-upgrade` hook.
 
 No production secrets in YAML. Use workload identity federation.
 

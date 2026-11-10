@@ -192,6 +192,14 @@ resource "azurerm_firewall_policy_rule_collection_group" "aks_egress" {
     }
 
     rule {
+      name                  = "sql-private-endpoint"
+      source_addresses      = ["10.2.0.0/16"]
+      destination_addresses = ["10.3.1.0/24"]
+      destination_ports     = ["1433"]
+      protocols             = ["TCP"]
+    }
+
+    rule {
       name                  = "ntp"
       source_addresses      = ["10.2.0.0/16", "10.4.0.0/16"]
       destination_addresses = ["*"]

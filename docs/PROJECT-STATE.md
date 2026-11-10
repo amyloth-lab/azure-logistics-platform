@@ -265,6 +265,8 @@ Private services:
 | Pod `CreateContainerConfigError` | Common cause: `runAsNonRoot` with a non-numeric image user (`USER app`), or a missing Secret/ConfigMap/ServiceAccount | Build the image with numeric UID/GID `10001:10001` and set matching `runAsUser`/`runAsGroup`/`fsGroup`; inspect `kubectl describe pod` for the exact event. |
 | Migration Job `ModuleNotFoundError: pyodbc` | The deployed image predates the Azure SQL dependencies, or the values digest is stale | Rebuild after the pyproject/Dockerfile change, update the image digest, and verify the new image with `python -c "import pyodbc, azure.identity"`; the Dockerfile now runs this check. |
 | pyodbc `FA005` cannot use Access Token with Authentication/Integrated Security/User/Password | SQLAlchemy's pyodbc dialect adds `Trusted_Connection=Yes` when the URL has no user; token plus trusted auth is invalid | Build the ODBC connection string explicitly and use `creator=`, without `Trusted_Connection`, `UID`, `PWD`, or `Authentication`. |
+| SQL `HYT00` Login timeout from a pod | AKS route to the data VNet private endpoint is blocked by the firewall | Add `sql-private-endpoint` network rule 10.2/16 → 10.3.1.0/24:1433, apply, and retry the migration Job. Verify SQL private DNS resolves to 10.3.1.x. |
+| Role assignment `Cannot find user or service principal ... appId` | `--assignee-object-id` received the application/client ID, not the service principal object ID | `az ad sp create --id <appId>` if missing, then use `az ad sp show --id <appId> --query id -o tsv` as `--assignee-object-id`. |
 | Terraform backend auth failure | Azure CLI `.azure` ACL | `icacls` fix + `az login`. |
 | State plan file stale after errors | Failed plan/apply | Delete plan, re-run `terraform plan`, apply new plan. |
 
@@ -272,7 +274,7 @@ Private services:
 
 ## 9. Current checkpoint and next action
 
-Current checkpoint: **Day 5 checkpoint 5B - deploy AKS chart and wire APIM.** 5A and 5B-0 are complete. The Helm chart and APIM API resources are added; deploy and smoke-test pending.
+Current checkpoint: **Day 5 checkpoint 5C - release pipeline.** 5A, 5B-0, and 5B are complete: image, Helm deployment, migration, internal Service, APIM path, and `/logistics/health` all work. 5C release automation is next.
 
 ### Day 4 completed
 
@@ -299,7 +301,9 @@ Closed: the first green Azure DevOps build is complete; zlib1g CVEs were fixed i
 - Helm `lint` and `template` pass; default image tag `0.1.0` prevents an empty-tag YAML parse error. Override with the immutable build tag or digest.
 - Service uses internal LoadBalancer IP `10.2.12.10` in `snet-aks-ingress`.
 - APIM module creates API `logistics-api`, path `logistics`, backend `http://10.2.12.10:80`, and GET operations for health/inventory/orders.
+- 5B verified: Helm revision 2 deployed, deployment 2/2 Ready, migration Job succeeded, direct service `/health` and APIM `/logistics/health` return `{"status":"ok"}`.
 - SQL schema init is currently `Base.metadata.create_all`; Alembic is still a production gap.
+- `pipelines/release.yml` added for tag-triggered dev release using the build `image-ref` artifact and secure `values-dev.yaml`; variable group `vg-logistics-release`.
 - Managed Redis is `Encrypted` with Entra-only auth, port `10000`; `REDIS_HOST` is hostname only and `REDIS_PORT=10000`. The app does not yet use `redis-entraid` or a Redis user assignment.
 
 5B-0 manual step: apply `module.api_identity`, then create the contained Azure SQL user for the API workload identity and grant `db_datareader`, `db_datawriter`, and migration schema rights. SQL has no public access, so use a temporary VNet jumpbox/pod or a temporary firewall exception that is reverted immediately.

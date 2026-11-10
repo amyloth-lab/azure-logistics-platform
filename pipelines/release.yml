@@ -1,0 +1,81 @@
+trigger:
+  tags:
+    include:
+      - "v*"
+
+pr: none
+
+resources:
+  pipelines:
+    - pipeline: build
+      source: logistics-api-build
+      trigger:
+        tags:
+          - "v*"
+
+variables:
+  - group: vg-logistics-release
+  - name: chartPackage
+    value: "$(Build.ArtifactStagingDirectory)/logistics-api-0.1.0.tgz"
+
+stages:
+  - stage: DeployDev
+    displayName: Deploy dev
+    jobs:
+      - deployment: HelmDev
+        pool:
+          vmImage: ubuntu-latest
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - download: build
+                  artifact: image-ref
+
+                - task: DownloadSecureFile@1
+                  name: valuesFile
+                  inputs:
+                    secureFile: $(VALUES_DEV_SECURE_FILE)
+
+                - script: |
+                    set -euo pipefail
+                    image_ref=$(cat "$(Pipeline.Workspace)/build/image-ref/image-ref.txt")
+                    digest="${image_ref##*@}"
+                    test -n "$digest"
+                    echo "Using digest: $digest"
+                    echo "##vso[task.setvariable variable=imageDigest]$digest"
+
+                    helm package deploy/helm/logistics-api --destination "$(Build.ArtifactStagingDirectory)"
+                    ls -l "$(Build.ArtifactStagingDirectory)"
+                  displayName: Package chart and read image digest
+
+                - task: AzureCLI@2
+                  displayName: Helm deploy to private AKS
+                  inputs:
+                    azureSubscription: $(AKS_RELEASE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az aks command invoke \
+                        --resource-group "$(AKS_RESOURCE_GROUP)" \
+                        --name "$(AKS_CLUSTER_NAME)" \
+                        --file "$(chartPackage)" \
+                        --file "$(valuesFile.secureFilePath)" \
+                        --command "helm upgrade --install logistics-api ./logistics-api-0.1.0.tgz -n logistics --create-namespace -f ./$(VALUES_DEV_SECURE_FILE) --set-string image.digest=$(imageDigest) --atomic --timeout 15m"
+
+                - task: AzureCLI@2
+                  displayName: Smoke test through APIM
+                  inputs:
+                    azureSubscription: $(AKS_RELEASE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az aks command invoke \
+                        --resource-group "$(AKS_RESOURCE_GROUP)" \
+                        --name "$(AKS_CLUSTER_NAME)" \
+                        --command "kubectl exec -n logistics deploy/logistics-api-logistics-api -- curl -fsS https://$(APIM_HOST)/logistics/health"
