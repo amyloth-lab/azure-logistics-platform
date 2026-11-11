@@ -396,12 +396,6 @@ You are done when:
 - [ ] `day-1` is committed and tagged.
 - [ ] No Azure resources were created.
 
-Then reply in the chat with exactly:
-
-```text
-EOD
-```
-
 Day 2 will start with the Terraform state bootstrap and the hub network.
 
 ---

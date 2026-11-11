@@ -551,4 +551,4 @@ Stop after 4D and reply `4D done`.
 - [ ] Build pipeline produces an image in ACR.
 - [ ] No public endpoint is required.
 
-At EOD, update `PROJECT-STATE.md` and reply `EOD`. Day 5 is release and deployment.
+Day 5 is release and deployment.

@@ -319,8 +319,6 @@ Completed in [runbook.md](../runbook.md):
 - Verify no orphan public IPs, disks, or private endpoints.
 - Check the budget.
 
-Stop after 5D and reply `EOD`.
-
 ---
 
 ## Day 5 acceptance

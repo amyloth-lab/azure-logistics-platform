@@ -4,7 +4,7 @@
 >
 > Copy it to `review-notes.local.md` and fill that file in. The local file is gitignored. If you already filled this tracked file, copy your answers to the local file and restore this file to the blank template before committing.
 
-Fill this in before you reply `EOD`. Keep it short. The goal is to prove you can explain the design, not to write an essay.
+Fill this in before End Of Day 1. Keep it short. The goal is to prove you can explain the design, not to write an essay.
 
 ## 1. Scope and assumptions
 

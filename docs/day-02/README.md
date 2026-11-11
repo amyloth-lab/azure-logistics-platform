@@ -594,10 +594,4 @@ If you keep the hub running, check Cost Management tomorrow morning. The budget 
 
 ## 13. End of Day 2
 
-Reply with exactly:
-
-```text
-EOD
-```
-
 Day 3A will build the spokes, private DNS links, ACR, Key Vault, SQL, Blob, Service Bus, and Managed Redis. Day 3B will build AKS, APIM, App Service, Functions, App Gateway, and the Ansible baseline. Do not start those today.

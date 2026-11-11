@@ -934,10 +934,8 @@ Do not start Day 2 until all of these are true:
 - [ ] I have not run `terraform apply`.
 - [ ] I have not created any billable Azure resources.
 
-When all boxes are checked, reply with exactly:
+Ensure all boxes are checked to complete Day 1.
 
-```text
-EOD
-```
+
 
 Day 2 will start with the Terraform state bootstrap and the hub network. Do not jump ahead: the state backend and identity model are prerequisites for everything else.

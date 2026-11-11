@@ -6,7 +6,7 @@
 
 > **Before starting:** read [the project state](../PROJECT-STATE.md). It is the compact memory of Days 1-2 and the current Day 3A blocker.
 
-> **Why "3A"?** Day 3 in the original plan tried to build the network, every data service, AKS, APIM, App Service, Functions, ACR, and Ansible in one sitting. That is not a realistic 4-5 hour day for a first DevOps role, and it is how insecure shortcuts happen. Day 3 is split into **3A** (network + data) and **3B** (AKS + APIM + App Service + Functions + Ansible). Finish 3A, reply `EOD`, then 3B is released.
+> **Why "3A"?** Day 3 in the original plan tried to build the network, every data service, AKS, APIM, App Service, Functions, ACR, and Ansible in one sitting. That is not a realistic 4-5 hour day for a first DevOps role, and it is how insecure shortcuts happen. Day 3 is split into **3A** (network + data) and **3B** (AKS + APIM + App Service + Functions + Ansible).
 
 ---
 
@@ -388,13 +388,7 @@ Check Cost Management tomorrow. If you are stopping for more than a day, conside
 
 ---
 
-## 12. End of Day 3A
-
-Reply with exactly:
-
-```text
-EOD
-```
+## 12. End of 3A
 
 Day 3B will add:
 

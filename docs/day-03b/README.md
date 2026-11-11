@@ -389,8 +389,6 @@ Day 3B is complete with these documented gaps:
 - Public WAF edge — public IP quota
 - Ansible control VM — vCPU quota
 
-Do not create any of the deferred resources. Move to EOD.
-
 ---
 
 ## End of each checkpoint
@@ -402,4 +400,4 @@ Do not proceed to the next checkpoint until the current one has:
 - The validation commands passing.
 - A commit and tag.
 
-At the end of the full Day 3B, reply `EOD`. Then Day 4 starts the FastAPI application, Entra auth/RBAC, tests, and the build pipeline.
+Day 4 starts the FastAPI application, Entra auth/RBAC, tests, and the build pipeline.
